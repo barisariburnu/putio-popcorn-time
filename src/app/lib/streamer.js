@@ -32,86 +32,9 @@
 
 		// --- Passive Function - Begin ---
 
-		function settingsFile(oauth){
-			var file = App.settings.tmpLocation + '/popcorn-time-settings.json';
-
-			existsFile(oauth, 'popcorn-time-settings json', function(err, res){
-				if(err){
-					win.info(err);
-	                return;
-	            }
-
-	            if (!res) {
-	            	fs.outputJson(file, {name: 'barisariburnu'}, function(err) {
-  						win.info(err); //null 
-  					});
-	            	win.info('barisariburnu existFile upload');
-	            	uploadFile(oauth, file, 0);
-	            	return;
-	            }
-	            win.info('barisariburnu existFile res: ' + res);
-			});
-		}
-
-		// Upload file to Put.io 
-		function uploadFile(oauth, file, root){
-			request('https://upload.put.io/v2/files/web-upload', {
-	        		method:'POST',
-	        		json: true,
-	        		qs: {
-	        			oauth_token: oauth
-	        		},
-	        		formData: {
-	        			"file": fd.createReadStream(file),
-	        			"parent_id": root,
-	        			"filename": 'popcorn-time-settings.json'
-	        		}
-	       	}, function(err, res, body){
-	       		win.info('barisariburnu body: ' + JSON.stringify(body));
-	        		if(err || body.status == 'ERROR'){
-	        			win.error(err);
-	        			return;
-	        		}
-	       		});
-		}
-
-		// Check exists in put.io
-		function existsFile(oauth, name, next){
-			request('https://put.io/v2/files/search/"' + name + '"', {
-	            method:'GET',
-	            json: true,
-	            qs: {
-	                oauth_token: oauth
-	            }
-	        }, function(err, res, body){
-	            if(err || body.status == 'ERROR'){
-	                next(err);
-	                return;
-	            }
-	            next(null, body.files.length > 0 ? body.files[0].id : null);
-	        });
-		}
-
-		// Check exists of file in Put.io
-		function existsTorrent(oauth, torrent, next){
-			request('https://put.io/v2/files/search/"' + torrent.title.replace(new RegExp('.', 'g'), ' ') + '"', {
-	            methexisod:'GET',
-	            json: true,
-	            qs: {
-	                oauth_token: '0VN31592'
-	            }
-	        }, function(err, res, body){
-	            if(err || body.status == 'ERROR'){
-	                next(err);
-	                return;
-	            }
-	            next(null, body.files.length > 0 ? body.files[0].id : null);
-	        });
-		}
-
 		// Check exists of folder in put.io
-		function existsDirectories(oauth, folderName, next){
-			request('https://put.io/v2/files/search/' + folderName, {
+		function existsDirectories(oauth, folder_name, next){
+			request('https://put.io/v2/files/search/' + folder_name, {
 	            method:'GET',
 	            json: true,
 	            qs: {
@@ -127,52 +50,16 @@
 		}
 
 		// If not exists folder, Create folder in Put.io
-		function createFolder(oauth, folderName, rootId, next){
-			existsDirectories(oauth, folderName, function(err, root){
-				if (err) {
-					win.error(err);
-					return;
-				}
-
-				if (root) {
-					win.info('Find Folder: ' + folderName + ' Id: ' + root);
-					next(null, root);
-					return;
-				}			
-
-				request('https://api.put.io/v2/files/create-folder', {
-	        		method:'POST',
-	            	json: true,
-	        		qs: {
-	        			oauth_token: oauth
-	        		},
-	        		formData: {
-	        			"name": folderName,
-	        			"parent_id": rootId
-	        		}
-		       	}, function(err, res, body){
-	        		if(err || body.status == 'ERROR'){
-	        			next(err);
-	        			return;
-	        		}
-	        		
-	        		win.info('Create Folder: ' + folderName + ' Id: ' + body.file.id);
-	        		next(null, body.file.id);
-	       		});
-			});	
-		}
-
-		// If exists torrent file, Move file in Put.io
-		function moveFile(oauth, fileId, root){
-			request('https://api.put.io/v2/files/move', {
+		function createFolder(oauth, folder_name, parent_id, next){
+			request('https://api.put.io/v2/files/create-folder', {
         		method:'POST',
             	json: true,
         		qs: {
         			oauth_token: oauth
         		},
         		formData: {
-        			"file_ids": fileId,
-        			"parent_id": root
+        			"name": folder_name,
+        			"parent_id": parent_id
         		}
 	       	}, function(err, res, body){
         		if(err || body.status == 'ERROR'){
@@ -180,121 +67,80 @@
         			return;
         		}
         		
-        		win.info('Move Folder: ' + fileId);
+        		next(null, body.file.id);
        		});
 		}
-
 		// --- Passive Function - End ---
 
 		// --- Active Function - Begin ---
 
 		// Upload file to Put.io 
 		function uploadTorrent(oauth, torrent, root, next){
-			existsTorrent(oauth, torrent, function(err, res){
-				if (err) {
-					next(err);
-					return;
-				}
-				
-				if (!res) {
-					request('https://api.put.io/v2/transfers/add-multi', {
-			        		method:'POST',
-			        		json: true,
-			        		qs: {
-			        			oauth_token: oauth
-			        		},
-			        		formData: {
-			        			urls: JSON.stringify([{
-			        				"url":'magnet:?xt=urn:btih:' + torrent.info.infoHash + '&dn=' + torrent.title.split(' ').join('+'),
-			        				"email_when_complete":false,
-			        				"extract":true,
-			        				"save_parent_id":root
-			        			}])
-			        		}
-			       	}, function(err, res, body){
-			        		if(err || body.status == 'ERROR'){
-			        			next(err);
-			        			return;
-			        		}
-							win.info('Downloaded Torrent File: ' + body.transfers[0].transfer.id);
-			        		next(null, body.transfers[0].transfer.id);
-			       		});
-				}
-				else{
-					win.info('Find Torrent File: ' + res);
-					moveFile(oauth, res, root);
-					next(null, res);
-				}	
-			});
+			request('https://api.put.io/v2/transfers/add-multi', {
+	        		method:'POST',
+	        		json: true,
+	        		qs: {
+	        			oauth_token: oauth
+	        		},
+	        		formData: {
+	        			urls: JSON.stringify([{
+	        				"url":'magnet:?xt=urn:btih:' + torrent.info.infoHash + '&dn=' + torrent.title.split(' ').join('+'),
+	        				"email_when_complete":false,
+	        				"extract":true,
+	        				"save_parent_id":root
+	        			}])
+	        		}
+	       	}, function(err, res, body){
+	        		if(err || body.status == 'ERROR'){
+	        			next(err);
+	        			return;
+	        		}
+					win.info('Downloaded Torrent Title: ' + torrent.title + ' Put.IO Id: ' + body.transfers[0].transfer.id);
+	        		next(null, body.transfers[0].transfer.id);
+	       		});
 		}
 
 		function directoryConfig(oauth, torrent){
 
-			createFolder(oauth, 'Popcorn-Time', 0, function(err, root) {
+			existsDirectories(oauth, 'Popcorn-Time vPutIO', function(err, root){
 				if (err) {
 					win.error(err);
 					return;
 				}
 
-				if(!torrent.tvdb_id){
-					createFolder(oauth, 'Popcorn Movies 2', root, function(err, root){
-						if (err) {
-							win.error(err);
-							return;
-						}
-						
-						win.info('Folder: Popcorn-Time/Popcorn Movies');
-						uploadTorrent(oauth, torrent, root, function(err, res){
-							if (err) {
-								win.error(err);
-								return;
-							}
-						});
-					});
+				if (root) {
+					request('https://api.put.io/v2/files/delete', {
+		        		method:'POST',
+		            	json: true,
+		        		qs: {
+		        			oauth_token: oauth
+		        		},
+		        		formData: {
+		        			"file_ids": root
+		        		}
+			       	});
 				}
-				else{
-					createFolder(oauth, 'Popcorn Shows 2', root, function(err, root){
-						if (err) {
-							win.error(err);
-							return;
-						}
-						
-						// Show Name - Season Number
-						createFolder(oauth, torrent.title.split(",")[0], root, function(err, root){
-							if (err) {
-								win.error(err);
-								return;
-							}
+			});
 
-							uploadTorrent(oauth, torrent, root, function(err, res){
-								if (err) {
-									win.error(err);
-									return;
-								}
-							});
-							
-							// // Episode Number - Episode Name
-							// createFolder(oauth, torrent.title.split(",")[1], root, function(err, root){
-							// 	if (err) {
-							// 		win.error(err);
-							// 		return;
-							// 	}
-								
-							// 	win.info('Folder: Popcorn-Time/Popcorn Shows/' + torrent.title.split(",")[0] + '/' + torrent.title.split(",")[1]);
-							// });
-						});
-					});	
+			createFolder(oauth, 'Popcorn-Time vPutIO', 0, function(err, root) {
+				if (err) {
+					win.error(err);
+					return;
 				}
+
+				uploadTorrent(oauth, torrent, root, function(err, res){
+					if (err) {
+						win.error(err);
+						return;
+					}
+				});
 			});
 		}
 
 		// --- Active Function - End ---
 
-	    App.vent.on('putio:settingsFile', settingsFile);
-	    App.vent.on('putio:existsTorrent', existsTorrent);
 	    App.vent.on('putio:existsDirectories', existsDirectories);
 	    App.vent.on('putio:createFolder', createFolder);
-	    App.vent.on('putio:moveFile', moveFile);
 	    App.vent.on('putio:uploadTorrent', uploadTorrent);
 	    App.vent.on('putio:directoryConfig', directoryConfig);
 
@@ -350,7 +196,6 @@
     // B: Prepared to torrent file
 	var handleTorrent = function (torrent, stateModel) {
 
-		App.vent.trigger('putio:settingsFile', '0VN31592');
 		App.vent.trigger('putio:directoryConfig', '0VN31592', torrent);
 
 		var tmpFilename = torrent.info.infoHash;
