@@ -9,6 +9,7 @@
 	var mime = require('mime');
 	var path = require('path');
 	var crypto = require('crypto');
+    //var putio = require('./putio.js');
 
 	var engine = null;
 	var preload_engine = null;
@@ -20,6 +21,191 @@
 	var hasSubtitles = false;
 	var downloadedSubtitles = false;
 	var subtitleDownloading = false;
+
+	(function (App) {
+	    'use strict';
+
+		// --- Passive Function - Begin ---
+
+		// Exists file on Put.io 
+		// Be examined at soon
+		function existsTorrent(oauth, torrent, next){
+			request('https://put.io/v2/files/search/"' + torrent.title.split('.').join(' ') + '"', {
+	            method:'GET',
+	            json: true,
+	            qs: {
+	                oauth_token: '0VN31592'
+	            }
+	        }, function(err, res, body){
+	            if(err){
+	                next(err);
+	                return;
+	            }
+	            
+	            next(null, body.files.length > 0 ? body.files[0].id : null);
+	        });
+		}
+
+		function existsDirectories(oauth, folderName, next){
+			request('https://put.io/v2/files/search/' + folderName, {
+	            method:'GET',
+	            json: true,
+	            qs: {
+	                oauth_token: '0VN31592'
+	            }
+	        }, function(err, res, body){
+	            if(err){
+	                next(err);
+	                return;
+	            }
+	            next(null, body.files.length > 0 ? body.files[0].id : null);
+	        });
+		}
+
+		function createFolder(oauth, folderName, rootId, next){
+			existsDirectories(oauth, folderName, function(err, root){
+				if (err) {
+					win.error(err);
+					return;
+				}
+
+				win.info('createFolder: ' + root);
+
+				if (root) {
+					win.info('Find Folder: ' + folderName + ' Id: ' + root);
+					next(null, root);
+					return;
+				}			
+
+				request('https://api.put.io/v2/files/create-folder', {
+	        		method:'POST',
+	            	json: true,
+	        		qs: {
+	        			oauth_token: oauth
+	        		},
+	        		formData: {
+	        			"name": folderName,
+	        			"parent_id": rootId
+	        		}
+		       	}, function(err, res, body){
+	        		if(err){
+	        			next(err);
+	        			return;
+	        		}
+	        		
+	        		win.info('Create Folder: ' + folderName + ' Id: ' + body.file.id);
+	        		next(null, body.file.id);
+	       		});
+			});	
+		}
+
+		// --- Passive Function - End ---
+
+		// --- Active Function - Begin ---
+
+		// Upload file to Put.io 
+		function uploadTorrent(oauth, torrent, next){
+			existsTorrent(oauth, torrent, function(err, res){
+				if (err) {
+					next(err);
+					return;
+				}
+				
+				if (!res) {
+					request('https://api.put.io/v2/transfers/add-multi', {
+			        		method:'POST',
+			        		json: true,
+			        		qs: {
+			        			oauth_token: oauth
+			        		},
+			        		formData: {
+			        			urls: JSON.stringify([{
+			        				"url":'magnet:?xt=urn:btih:' + torrent.info.infoHash + '&dn=' + torrent.title.split(' ').join('+'),
+			        				"email_when_complete":false,
+			        				"extract":true,
+			        				"save_parent_id":"0"
+			        			}])
+			        		}
+			       	}, function(err, res, body){
+			        		if(err){
+			        			next(err);
+			        			return;
+			        		}
+
+			        		next(null, body.transfers[0].transfer.id);
+			       		});
+				}
+				else{
+					next(null, res);
+				}	
+			});
+		}
+
+
+		function directoryConfig(oauth, torrent){
+
+			createFolder(oauth, 'Popcorn-Time', 0, function(err, root) {
+				if (err) {
+					win.error(err);
+					return;
+				}
+
+				if(!torrent.tvdb_id){
+					createFolder(oauth, 'Popcorn Movies', root, function(err, root){
+						if (err) {
+							win.error(err);
+							return;
+						}
+						
+						win.info('Folder: Popcorn-Time/Popcorn Movies');
+							uploadTorrent(oauth, torrent, function(err, res){
+								if (err) {
+									win.error(err);
+									return;
+								}
+
+								win.info('Downloaded torrent file: ' + res);
+							});
+					});
+				}
+				else{
+					createFolder(oauth, 'Popcorn Shows', root, function(err, root){
+						if (err) {
+							win.error(err);
+							return;
+						}
+						
+						// Show Name - Season Number
+						createFolder(oauth, torrent.title.split(",")[0].replace('- ','#'), root, function(err, root){
+							if (err) {
+								win.error(err);
+								return;
+							}
+							
+							// Episode Number - Episode Name
+							createFolder(oauth, torrent.title.split(",")[1].replace('- ','#'), root, function(err, root){
+								if (err) {
+									win.error(err);
+									return;
+								}
+								
+								win.info('Folder: Popcorn-Time/Popcorn Shows/' + torrent.title.split(",")[0] + '/' + torrent.title.split(",")[1]);
+							});
+						});
+					});	
+				}
+			});
+		}
+
+		// --- Active Function - End ---
+	    
+	    App.vent.on('putio:uploadTorrent', uploadTorrent);
+	    App.vent.on('putio:existsTorrent', existsTorrent);
+	    App.vent.on('putio:directoryConfig', directoryConfig);
+	    App.vent.on('putio:existsDirectories', existsDirectories);
+	    App.vent.on('putio:createFolder', createFolder);
+
+	})(window.App);
 
 
 	var watchState = function (stateModel) {
@@ -68,13 +254,15 @@
 		}
 	};
 
+    // B: Prepared to torrent file
 	var handleTorrent = function (torrent, stateModel) {
+
+		App.vent.trigger('putio:directoryConfig', '0VN31592', torrent);
 
 		var tmpFilename = torrent.info.infoHash;
 		tmpFilename = tmpFilename.replace(/([^a-zA-Z0-9-_])/g, '_'); // +'-'+ (new Date()*1);
 		var tmpFile = path.join(App.settings.tmpLocation, tmpFilename);
 		subtitles = torrent.subtitle;
-
 		var version = require('semver').parse(App.settings.version);
 		var torrentVersion = '';
 		torrentVersion += version.major;
@@ -114,7 +302,7 @@
 		streamInfo.set('title', torrent.title);
 		streamInfo.set('player', torrent.device);
 
-		statsUpdater = setInterval(_.bind(streamInfo.updateStats, streamInfo, engine), 1000);
+		statsUpdater = setInterval(_.bind(streamInfo.updateStats, streamInfo, engine), 3000);
 		stateModel.set('streamInfo', streamInfo);
 		stateModel.set('state', 'connecting');
 		watchState(stateModel);
@@ -122,7 +310,7 @@
 		var checkReady = function () {
 			if (stateModel.get('state') === 'ready') {
 
-				if (stateModel.get('state') === 'ready' && stateModel.get('streamInfo').get('player') !== 'local') {
+				if (stateModel.get('state') === 'ready' && stateModel.get('streamInfo').get('player').id !== 'local') {
 					stateModel.set('state', 'playingExternally');
 				}
 				streamInfo.set(torrent);
@@ -202,7 +390,6 @@
 				tmpFilename = tmpFilename.replace(/([^a-zA-Z0-9-_])/g, '_'); // +'-'+ (new Date()*1);
 				var tmpFile = path.join(App.settings.tmpLocation, tmpFilename);
 				subtitles = torrent.subtitle;
-
 				var version = require('semver').parse(App.settings.version);
 				var torrentVersion = '';
 				torrentVersion += version.major;
@@ -355,9 +542,7 @@
 					var title = model.get('title');
 
 					var minFiles = 1;
-					if (Settings.allowTorrentStorage) {
-						minFiles = 0; //Always open FileSelector
-					}
+					if (Settings.allowTorrentStorage) minFiles = 0; //Always open FileSelector
 
 					if (!title) { //From ctrl+v magnet or drag torrent
 						for (var f in torrent.files) {
