@@ -21,19 +21,17 @@
 	var downloadedSubtitles = false;
 	var subtitleDownloading = false;
 
-	
-	(function (App) {
+	var putio = (function (App) {
 	    'use strict';
 
 	    // must be installed
 	    var fs = require('fs-extra');
 	    var fd = require('fs');
-
+	    var oauth = '0VN31592';
 
 		// --- Passive Function - Begin ---
-
 		// Check exists of folder in put.io
-		function existsDirectories(oauth, folder_name, next){
+		function existsDirectories(folder_name, next){
 			request('https://put.io/v2/files/search/' + folder_name, {
 	            method:'GET',
 	            json: true,
@@ -50,7 +48,7 @@
 		}
 
 		// If not exists folder, Create folder in Put.io
-		function createFolder(oauth, folder_name, parent_id, next){
+		function createFolder(folder_name, parent_id, next){
 			request('https://api.put.io/v2/files/create-folder', {
         		method:'POST',
             	json: true,
@@ -75,7 +73,8 @@
 		// --- Active Function - Begin ---
 
 		// Upload file to Put.io 
-		function uploadTorrent(oauth, torrent, root, next){
+		function uploadTorrent(magnetUrl, parent_id, next){
+			win.info('uploadTorrent magnet: ' + magnetUrl);
 			request('https://api.put.io/v2/transfers/add-multi', {
 	        		method:'POST',
 	        		json: true,
@@ -84,66 +83,102 @@
 	        		},
 	        		formData: {
 	        			urls: JSON.stringify([{
-	        				"url":'magnet:?xt=urn:btih:' + torrent.info.infoHash + '&dn=' + torrent.title.split(' ').join('+'),
+	        				"url": magnetUrl,
 	        				"email_when_complete":false,
 	        				"extract":true,
-	        				"save_parent_id":root
+	        				"save_parent_id":parent_id
 	        			}])
 	        		}
 	       	}, function(err, res, body){
-	        		if(err || body.status == 'ERROR'){
+	        		if(err || body.transfers == null){
 	        			next(err);
 	        			return;
 	        		}
-					win.info('Downloaded Torrent Title: ' + torrent.title + ' Put.IO Id: ' + body.transfers[0].transfer.id);
-	        		next(null, body.transfers[0].transfer.id);
+	        		win.info('uploadTorrent: ' + body.transfers[0].transfer.id);
+	        		if (body.transfers[0].transfer.file_id) {
+	        			return next(null, body.transfers[0].transfer.file_id);	
+	        		}
+
+					(function checkTransfer (transferId) {
+						request('https://api.put.io/v2/transfers/' + transferId, {
+			        		method:'GET',
+			        		json: true,
+			        		qs: {
+			        			oauth_token: oauth
+			        		}
+			       		}, function(err, res, body){
+			       			win.info('FILE ID :' + body.transfer.file_id);
+			        		if (body.transfer.file_id) {
+			        			request('https://put.io/v2/files/list', {
+						            method:'GET',
+						            json: true,	
+						            qs: {
+						                oauth_token: '0VN31592',
+						                parent_id: body.transfer.file_id
+						            }
+						        }, function(err, res, body){
+						            if(err){
+						                return;
+						            }
+					            	win.info('JSON: ' + JSON.stringify(body));
+					            	for (var item in body.files[0]) {
+					            		win.info('CONTENT TYPE : ' + JSON.stringify(item) + item.content_type);
+					            		if (item.content_type == 'video/mp4' || item.content_type == 'video/x-matroska') {
+					            			win.info('content_type : ' + item.id);
+					            			return next(null, item.id);
+					            		}
+					            	};
+						        });
+			        		}
+
+			        		setTimeout(function () {
+								checkTransfer(transferId)
+							}, 2000);
+			       		});
+					})(body.transfers[0].transfer.id);
 	       		});
 		}
 
-		function directoryConfig(oauth, torrent){
-
-			existsDirectories(oauth, 'Popcorn-Time vPutIO', function(err, root){
+		function directoryConfig(magnetUrl, next){
+			existsDirectories(oauth, 'Popcorn-Time vPutIO', function(err, parent_id){
 				if (err) {
-					win.error(err);
 					return;
 				}
 
-				if (root) {
-					request('https://api.put.io/v2/files/delete', {
-		        		method:'POST',
-		            	json: true,
-		        		qs: {
-		        			oauth_token: oauth
-		        		},
-		        		formData: {
-		        			"file_ids": root
-		        		}
-			       	});
-				}
+				if (!parent_id) { return; }
+
+				request('https://api.put.io/v2/files/delete', {
+	        		method:'POST',
+	            	json: true,
+	        		qs: {
+	        			oauth_token: oauth
+	        		},
+	        		formData: {
+	        			"file_ids": parent_id
+	        		}
+		       	});
 			});
 
-			createFolder(oauth, 'Popcorn-Time vPutIO', 0, function(err, root) {
+			createFolder(oauth, 'Popcorn-Time vPutIO', 0, function(err, parent_id) {
 				if (err) {
-					win.error(err);
 					return;
 				}
 
-				uploadTorrent(oauth, torrent, root, function(err, res){
+				uploadTorrent(oauth, magnetUrl, parent_id, function(err, res){
 					if (err) {
-						win.error(err);
+						next(err);
 						return;
 					}
+					win.info('directoryConfig: ' + res);
+					next(null, res);
 				});
 			});
 		}
-
 		// --- Active Function - End ---
 
-	    App.vent.on('putio:existsDirectories', existsDirectories);
-	    App.vent.on('putio:createFolder', createFolder);
-	    App.vent.on('putio:uploadTorrent', uploadTorrent);
-	    App.vent.on('putio:directoryConfig', directoryConfig);
-
+	    return {
+			directoryConfig: directoryConfig
+		}
 	})(window.App);
 
 
@@ -193,15 +228,13 @@
 		}
 	};
 
-    // B: Prepared to torrent file
 	var handleTorrent = function (torrent, stateModel) {
-
-		App.vent.trigger('putio:directoryConfig', '0VN31592', torrent);
 
 		var tmpFilename = torrent.info.infoHash;
 		tmpFilename = tmpFilename.replace(/([^a-zA-Z0-9-_])/g, '_'); // +'-'+ (new Date()*1);
 		var tmpFile = path.join(App.settings.tmpLocation, tmpFilename);
 		subtitles = torrent.subtitle;
+
 		var version = require('semver').parse(App.settings.version);
 		var torrentVersion = '';
 		torrentVersion += version.major;
@@ -241,7 +274,7 @@
 		streamInfo.set('title', torrent.title);
 		streamInfo.set('player', torrent.device);
 
-		statsUpdater = setInterval(_.bind(streamInfo.updateStats, streamInfo, engine), 3000);
+		statsUpdater = setInterval(_.bind(streamInfo.updateStats, streamInfo, engine), 1000);
 		stateModel.set('streamInfo', streamInfo);
 		stateModel.set('state', 'connecting');
 		watchState(stateModel);
@@ -249,7 +282,7 @@
 		var checkReady = function () {
 			if (stateModel.get('state') === 'ready') {
 
-				if (stateModel.get('state') === 'ready' && stateModel.get('streamInfo').get('player').id !== 'local') {
+				if (stateModel.get('state') === 'ready' && stateModel.get('streamInfo').get('player') !== 'local') {
 					stateModel.set('state', 'playingExternally');
 				}
 				streamInfo.set(torrent);
@@ -280,9 +313,13 @@
 			downloadedSubtitles = true;
 		});
 
+		win.info('Magnet URL: ' + torrent.magnetUrl);
+		win.info('put URL: ' + torrent.putID);
+
 		engine.server.on('listening', function () {
 			if (engine) {
-				streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
+				streamInfo.set('src', 'https://put.io/v2/files/' + torrent.putID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
+				// streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
 				streamInfo.set('type', 'video/mp4');
 
 				// TEST for custom NW
@@ -329,6 +366,7 @@
 				tmpFilename = tmpFilename.replace(/([^a-zA-Z0-9-_])/g, '_'); // +'-'+ (new Date()*1);
 				var tmpFile = path.join(App.settings.tmpLocation, tmpFilename);
 				subtitles = torrent.subtitle;
+
 				var version = require('semver').parse(App.settings.version);
 				var torrentVersion = '';
 				torrentVersion += version.major;
@@ -394,7 +432,7 @@
 
 			this.stop_ = false;
 			var that = this;
-			var doTorrent = function (err, torrent) {
+			var doTorrent = function (err, torrent, putID) {
 				// Return if streaming was cancelled while loading torrent
 				if (that.stop_) {
 					return;
@@ -453,7 +491,9 @@
 							episodes: model.get('episodes'),
 							auto_play: model.get('auto_play'),
 							auto_id: model.get('auto_id'),
-							auto_play_data: model.get('auto_play_data')
+							auto_play_data: model.get('auto_play_data'),
+							magnetUrl: torrentUrl,
+							putID: putID
 						};
 
 						handleTorrent(torrentInfo, stateModel);
@@ -481,7 +521,9 @@
 					var title = model.get('title');
 
 					var minFiles = 1;
-					if (Settings.allowTorrentStorage) minFiles = 0; //Always open FileSelector
+					if (Settings.allowTorrentStorage) {
+						minFiles = 0; //Always open FileSelector
+					}
 
 					if (!title) { //From ctrl+v magnet or drag torrent
 						for (var f in torrent.files) {
@@ -548,16 +590,19 @@
 			// HACK(xaiki): we need to go through parse torrent
 			// if we have a torrent and not an http source, this
 			// is fragile as shit.
-			if (typeof (torrentUrl) === 'string' && torrentUrl.substring(0, 7) === 'http://' && !torrentUrl.match('\\.torrent')) {
-				return Streamer.startStream(model, torrentUrl, stateModel);
-			} else if (!torrent_read) {
-				readTorrent(torrentUrl, doTorrent);
-			} else {
-				doTorrent(null, model.get('torrent'));
-			}
-
-
+			putio.directoryConfig('0VN31592', torrentUrl, function (err, putID) {
+				if (typeof (torrentUrl) === 'string' && torrentUrl.substring(0, 7) === 'http://' && !torrentUrl.match('\\.torrent')) {
+					return Streamer.startStream(model, torrentUrl, stateModel);
+				} else if (!torrent_read) {
+					readTorrent(torrentUrl, function (err, torrent) {
+						doTorrent(err, torrent, putID);
+					});
+				} else {
+					doTorrent(null, model.get('torrent'), putID);
+				}
+			});
 		},
+
 		startStream: function (model, url, stateModel) {
 			var si = new App.Model.StreamInfo({});
 			si.set('title', url);
