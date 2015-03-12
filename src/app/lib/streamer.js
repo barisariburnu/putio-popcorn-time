@@ -24,147 +24,241 @@
 	var putio = (function (App) {
 	    'use strict';
 
-	    // must be installed
+	    // Must be installed
 	    var fs = require('fs-extra');
 	    var fd = require('fs');
-	    var oauth = '0VN31592';
 
-		// --- Passive Function - Begin ---
-		// Check exists of folder in put.io
-		function existsDirectories(folder_name, next){
-			request('https://put.io/v2/files/search/' + folder_name, {
-	            method:'GET',
-	            json: true,
-	            qs: {
-	                oauth_token: '0VN31592'
-	            }
-	        }, function(err, res, body){
-	            if(err || body.status == 'ERROR'){
-	                next(err);
-	                return;
-	            }
-	            next(null, body.files.length > 0 ? body.files[0].id : null);
-	        });
+	    var oauth_token = '0VN31592';
+	    var api = 'https://api.put.io/v2/';
+
+    	/* 
+		Parameters
+			- parent_id: ID of the folder you’d like to list. This defaults to the root directory (which has ID number 0)
+		*/
+		function list(parameters, callback){
+			request(api + 'files/list', {
+		        method:'GET',
+		        json: true,
+		        qs: {
+		            oauth_token: oauth_token,
+		            parent_id: parameters.parent_id ? parameters.parent_id : 0
+		        }
+		    }, function(err, res, body){
+		        if(err){ return callback(err); }
+
+		        callback(null, body.files);
+		    });
 		}
 
-		// If not exists folder, Create folder in Put.io
-		function createFolder(folder_name, parent_id, next){
-			request('https://api.put.io/v2/files/create-folder', {
-        		method:'POST',
-            	json: true,
-        		qs: {
-        			oauth_token: oauth
-        		},
-        		formData: {
-        			"name": folder_name,
-        			"parent_id": parent_id
-        		}
-	       	}, function(err, res, body){
-        		if(err || body.status == 'ERROR'){
+		/*
+		Parameters
+			- query: The keyword to search
+			- page:	Optional. Defaults to 1. If -1 given, returns all results at a time
+		*/
+		function search(parameters, callback){
+			request(api + 'files/search/' + parameters.query + '/page/' + (parameters.page ? parameters.page : '1'), {
+		        method:'GET',
+		        json: true,
+		        qs: {
+		            oauth_token: oauth_token
+		        }
+		    }, function(err, res, body){
+		        if(err){ return callback(err); }
+
+		        callback(null, body.files);
+		    });
+		}
+
+		/*
+		Parameters
+			- name:	Name of the new folder
+			- parent_id: Location of the new folder
+		*/
+		function createFolder(parameters, callback){
+			request(api + 'files/create-folder', {
+		    		method:'POST',
+		    		json: true,
+		    		qs: {
+		    			oauth_token: oauth_token
+		    		},
+		    		formData: {
+						"name": parameters.name,
+						"parent_id": parameters.parent_id ? parameters.parent_id : 0
+		    		}
+		   	}, function(err, res, body){
+		    		if(err){ return callback(err); }
+
+		    		callback(null, body.file);
+		   		});
+		}
+
+		/*
+		Parameters
+			- file_ids:	File ids separated by commas. Ex: 1,2,3,4
+		*/
+		function deleteFile(parameters, callback){
+			request(api + 'files/delete', {
+		    		method:'POST',
+		    		json: true,
+		    		qs: {
+		    			oauth_token: oauth_token
+		    		},
+		    		formData: {
+						"file_ids": parameters.file_ids
+		    		}
+		   	}, function(err, res, body){
+		    		if(err){ return callback(err); }
+
+		    		callback(null, body);
+		   		});
+		}
+
+		/*
+		Parameters
+			- url:	Magnet url.
+			- parent_id: Location of the uploaded file. This defaults to 0 (which means root)
+		*/
+		function uploadFromURL(parameters, callback){
+			request(api + 'transfers/add-multi', {
+		    		method:'POST',
+		    		json: true,
+		    		qs: {
+		    			oauth_token: oauth_token
+		    		},
+		    		formData: {
+		    			urls: JSON.stringify([{
+		    				"url": parameters.url,
+		    				"email_when_complete": false,
+		    				"extract": true,
+		    				"save_parent_id": parameters.parent_id ? parameters.parent_id : 0
+		    			}])
+		    		}
+		   	}, function(err, res, body){
+		    		if(err){ return callback(err); }
+
+		    		win.info('Body : ' + body.transfers[0].transfer.id);
+
+		    		callback(null, body.transfers[0].transfer);
+		   		});
+		}
+
+		/* 
+		Parameters
+			- id: Transfer id
+		*/
+		function getTransfer(parameters, callback){
+			request(api + 'transfers/' + parameters.id, {
+		        method:'GET',
+		        json: true,
+		        qs: {
+		            oauth_token: oauth_token
+		        }
+		    }, function(err, res, body){
+		        if(err){ return callback(err); }
+
+		        callback(null, body.transfer);
+		    });
+		}
+
+		/* 
+		Parameters
+			- magnetUrl: 
+			- parent_id: 
+			- next: callback. Shows/Movies ID in Putio
+		*/
+		function uploadTorrent(magnetUrl, parent_id, next){
+
+			win.info('uploadFromURL magnetUrl: ' + magnetUrl);
+			win.info('uploadFromURL parent_id: ' + parent_id);
+
+			uploadFromURL({url: magnetUrl, parent_id: parent_id}, function(err, transfer){
+				if(err || transfer == null){
+        			win.error(err);
         			next(err);
         			return;
         		}
-        		
-        		next(null, body.file.id);
-       		});
-		}
-		// --- Passive Function - End ---
 
-		// --- Active Function - Begin ---
+        		win.info('uploadTorrent: ' + transfer.id);
 
-		// Upload file to Put.io 
-		function uploadTorrent(magnetUrl, parent_id, next){
-			win.info('uploadTorrent magnet: ' + magnetUrl);
-			request('https://api.put.io/v2/transfers/add-multi', {
-	        		method:'POST',
-	        		json: true,
-	        		qs: {
-	        			oauth_token: oauth
-	        		},
-	        		formData: {
-	        			urls: JSON.stringify([{
-	        				"url": magnetUrl,
-	        				"email_when_complete":false,
-	        				"extract":true,
-	        				"save_parent_id":parent_id
-	        			}])
-	        		}
-	       	}, function(err, res, body){
-	        		if(err || body.transfers == null){
-	        			next(err);
-	        			return;
-	        		}
-	        		win.info('uploadTorrent: ' + body.transfers[0].transfer.id);
-	        		if (body.transfers[0].transfer.file_id) {
-	        			return next(null, body.transfers[0].transfer.file_id);	
-	        		}
+        		if (transfer.file_id){
+        			return next(null, transfer.file_id);
+        		}
 
-					(function checkTransfer (transferId) {
-						request('https://api.put.io/v2/transfers/' + transferId, {
-			        		method:'GET',
-			        		json: true,
-			        		qs: {
-			        			oauth_token: oauth
-			        		}
-			       		}, function(err, res, body){
-			       			win.info('FILE ID :' + body.transfer.file_id);
-			        		if (body.transfer.file_id) {
-			        			request('https://put.io/v2/files/list', {
-						            method:'GET',
-						            json: true,	
-						            qs: {
-						                oauth_token: '0VN31592',
-						                parent_id: body.transfer.file_id
-						            }
-						        }, function(err, res, body){
-						            if(err){
-						                return;
-						            }
-					            	win.info('JSON: ' + JSON.stringify(body));
-					            	for (var item in body.files[0]) {
-					            		win.info('CONTENT TYPE : ' + JSON.stringify(item) + item.content_type);
-					            		if (item.content_type == 'video/mp4' || item.content_type == 'video/x-matroska') {
-					            			win.info('content_type : ' + item.id);
-					            			return next(null, item.id);
-					            		}
-					            	};
-						        });
-			        		}
+        		(function checkTransfer(transferId){
+        			getTransfer({id: transferId}, function(err, body){
+        				win.info('Transfer ID: ' + body.id);
+	        			win.info('File ID:' + body.file_id);
+	        			if (body.file_id) {
+	        				list({parent_id: body.file_id}, function(err, files){
+	        					if (err) { return win.error(err); };
 
-			        		setTimeout(function () {
-								checkTransfer(transferId)
-							}, 2000);
-			       		});
-					})(body.transfers[0].transfer.id);
-	       		});
+	        					// Shows
+	        					if (!files) {
+	        						return next(null, body.file_id);
+	        					}
+
+	        					// Movies
+	        					for (var i = 0; i < files.length; i++) {
+	        						win.info('Content Type: ' +  files[i].content_type);
+
+	        						if (files[i].content_type == 'video/mp4' || files[i].content_type == 'video/x-matroska') {
+	        							win.info('Content Type: ' +  files[i].content_type);
+
+	        							return next(null, files[i].id);
+	        						}
+	        					}
+	        				});
+	        			}
+	        			else{
+		        			setTimeout(function(){
+				       			checkTransfer(transferId);
+				       		}, 2000);
+		        		}
+		       		});
+		       	})(transfer.id);		       	
+			});
 		}
 
+		/* 
+		Parameters
+			- magnetUrl: 
+		*/
 		function directoryConfig(magnetUrl, next){
-			existsDirectories(oauth, 'Popcorn-Time vPutIO', function(err, parent_id){
+			// Hatalı arama sonucu dönüyor
+			search({query: 'Popcorn-Time vPutIO', page: '1'}, function(err, files){
 				if (err) {
-					return;
+					return win.error('Search Error: ' + err);
 				}
 
-				if (!parent_id) { return; }
+				win.info('Search Files: ' + files);
 
-				request('https://api.put.io/v2/files/delete', {
-	        		method:'POST',
-	            	json: true,
-	        		qs: {
-	        			oauth_token: oauth
-	        		},
-	        		formData: {
-	        			"file_ids": parent_id
-	        		}
-		       	});
+				if (!files) { return; }
+
+				for (var i =  0; i < files.length; i++) {
+
+					win.info('Delete File Id: ' + files[i].id);
+
+					request(api + 'files/delete', {
+		        		method:'POST',
+		            	json: true,
+		        		qs: {
+		        			oauth_token: oauth_token
+		        		},
+		        		formData: {
+		        			"file_ids": files[i].id
+		        		}
+			       	});
+				};
 			});
 
-			createFolder(oauth, 'Popcorn-Time vPutIO', 0, function(err, parent_id) {
+			createFolder({name: 'Popcorn-Time vPutIO', parent_id: '0'}, function(err, file) {
 				if (err) {
 					return;
 				}
 
-				uploadTorrent(oauth, magnetUrl, parent_id, function(err, res){
+				win.info('Create Folder ID: ' + file.id);
+
+				uploadTorrent(magnetUrl, file.id, function(err, res){
 					if (err) {
 						next(err);
 						return;
@@ -174,7 +268,6 @@
 				});
 			});
 		}
-		// --- Active Function - End ---
 
 	    return {
 			directoryConfig: directoryConfig
@@ -252,12 +345,12 @@
 			connections: parseInt(Settings.connectionLimit, 10) || 100, // Max amount of peers to be connected to.
 			dht: parseInt(Settings.dhtLimit, 10) || 50,
 			port: parseInt(Settings.streamPort, 10) || 0,
-			tmp: App.settings.tmpLocation,
-			path: tmpFile, // we'll have a different file name for each stream also if it's same torrent in same session
 			buffer: (1.5 * 1024 * 1024).toString(), // create a buffer on torrent-stream
 			index: torrent.file_index,
 			id: torrentPeerId
 		});
+
+		win.info('ENGINE JSON: ' + JSON.stringify(engine));
 
 		engine.swarm.piecesGot = 0;
 		engine.on('verify', function (index) {
@@ -267,6 +360,8 @@
 		var streamInfo = new App.Model.StreamInfo({
 			engine: engine
 		});
+
+		win.info('streamInfo JSON: ' + JSON.stringify(streamInfo));
 
 		// Fix for loading modal
 		streamInfo.updateStats(engine);
@@ -318,6 +413,7 @@
 
 		engine.server.on('listening', function () {
 			if (engine) {
+				win.info('Stream SRC: https://put.io/v2/files/' + torrent.putID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
 				streamInfo.set('src', 'https://put.io/v2/files/' + torrent.putID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
 				// streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
 				streamInfo.set('type', 'video/mp4');
@@ -590,7 +686,7 @@
 			// HACK(xaiki): we need to go through parse torrent
 			// if we have a torrent and not an http source, this
 			// is fragile as shit.
-			putio.directoryConfig('0VN31592', torrentUrl, function (err, putID) {
+			putio.directoryConfig(torrentUrl, function (err, putID) {
 				if (typeof (torrentUrl) === 'string' && torrentUrl.substring(0, 7) === 'http://' && !torrentUrl.match('\\.torrent')) {
 					return Streamer.startStream(model, torrentUrl, stateModel);
 				} else if (!torrent_read) {
