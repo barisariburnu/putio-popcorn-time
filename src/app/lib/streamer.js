@@ -136,7 +136,7 @@
 		    			}])
 		    		}
 		   	}, function(err, res, body){
-		    		if(err || body.errors){ return; }
+		    		if(err || body.errors.error){ return win.info(JSON.stringify(body)); }
 
 		    		win.info('uploadFromURL: ' + body.transfers[0].transfer.id);
 
@@ -227,9 +227,7 @@
 
 			uploadFromURL({url: magnetUrl, parent_id: parent_id}, function(err, transfer){
 				if(err || transfer == null){
-        			win.error(err);
-        			next(err);
-        			return;
+        			return win.error(err);
         		}
 
         		win.info('uploadTorrent: ' + transfer.id);
