@@ -30,6 +30,11 @@
 
 	    var oauth_token = '0VN31592';
 	    var api = 'https://api.put.io/v2/';
+	    // Keep to 'Current Stream Transfer ID' in putio
+	    var currentStreamID = null;
+	    // Keep to 'Current Stream File ID' in putio
+	    var currentFileID = null;
+	    var isCancelStream = false;
 
     	/* 
 		Parameters
@@ -134,9 +139,9 @@
 		    			}])
 		    		}
 		   	}, function(err, res, body){
-		    		if(err){ return callback(err); }
+		    		if(err || body.errors[0]){ return win.info(JSON.stringify(body)); }
 
-		    		win.info('Body : ' + body.transfers[0].transfer.id);
+		    		win.info('uploadFromURL: ' + body.transfers[0].transfer.id);
 
 		    		callback(null, body.transfers[0].transfer);
 		   		});
@@ -160,6 +165,67 @@
 		    });
 		}
 
+		/*
+		Cancel Transfer (POST)
+			- Deletes the given transfers
+		Parameters
+			- transfer_ids: Transfer ids separated by commas. Ex: 1,2,3,4
+		*/
+		function cancelTransfer(parameters, callback){
+			request(api + 'transfers/cancel', {
+		    		method:'POST',
+		    		json: true,
+		    		qs: {
+		    			oauth_token: oauth_token
+		    		},
+		    		formData: {
+		    			"transfer_ids": parameters.transfer_ids
+		    		}
+		   	}, function(err, res, body){
+		    		if(err){ return callback(err); }
+
+		    		callback(null, body);
+		   		});
+		}
+
+		/* 
+		List Transfer (GET)
+			- Lists active transfers. If transfer is completed, it is removed from the list
+		*/
+		function listTransfer(parameters, callback){
+			request(api + 'transfers/list', {
+		        method:'GET',
+		        json: true,
+		        qs: {
+		            oauth_token: oauth_token
+		        }
+		    }, function(err, res, body){
+		        if(err){ return callback(err); }
+
+		        callback(null, body.transfers);
+		    });
+		}
+
+		function cancelStream(){
+
+			if (!currentStreamID) { return; }
+
+			if (!currentFileID) {
+				cancelTransfer({transfer_ids: currentStreamID}, function(err, body){
+					if (err) { return win.error('Cancel Stream Error: ' + err); }
+
+					isCancelStream = true;
+				});
+			}
+			else{
+				deleteFile({file_ids: currentFileID},function(err, body){
+					if (err) { return win.error('Delete Stream File Error: ' + err); }
+
+					isCancelStream = true;
+				});
+			}
+		}
+
 		/* 
 		Parameters
 			- magnetUrl: 
@@ -173,24 +239,33 @@
 
 			uploadFromURL({url: magnetUrl, parent_id: parent_id}, function(err, transfer){
 				if(err || transfer == null){
-        			win.error(err);
-        			next(err);
-        			return;
+        			return win.error(err);
         		}
 
         		win.info('uploadTorrent: ' + transfer.id);
+
+        		// If torrent stream started
+        		currentStreamID = transfer.id;
+        		isCancelStream = false;
 
         		if (transfer.file_id){
         			return next(null, transfer.file_id);
         		}
 
         		(function checkTransfer(transferId){
+
+        			// If Stream stopped, when not check transfer
+        			if (isCancelStream) { return; }
+
         			getTransfer({id: transferId}, function(err, body){
         				win.info('Transfer ID: ' + body.id);
 	        			win.info('File ID:' + body.file_id);
+
 	        			if (body.file_id) {
 	        				list({parent_id: body.file_id}, function(err, files){
 	        					if (err) { return win.error(err); };
+
+	        					currentFileID = body.file_id;
 
 	        					// Shows
 	        					if (!files) {
@@ -201,9 +276,9 @@
 	        					for (var i = 0; i < files.length; i++) {
 	        						win.info('Content Type: ' +  files[i].content_type);
 
-	        						if (files[i].content_type == 'video/mp4' || files[i].content_type == 'video/x-matroska') {
+	        						if (files[i].content_type == 'video/mp4' || 
+	        							files[i].content_type == 'video/x-matroska') {
 	        							win.info('Content Type: ' +  files[i].content_type);
-
 	        							return next(null, files[i].id);
 	        						}
 	        					}
@@ -222,6 +297,7 @@
 		/* 
 		Parameters
 			- magnetUrl: 
+			- next: callback. Shows/Movies ID in Putio
 		*/
 		function directoryConfig(magnetUrl, next){
 			// Hatalı arama sonucu dönüyor
@@ -259,10 +335,7 @@
 				win.info('Create Folder ID: ' + file.id);
 
 				uploadTorrent(magnetUrl, file.id, function(err, res){
-					if (err) {
-						next(err);
-						return;
-					}
+					if (err) { return; }
 					win.info('directoryConfig: ' + res);
 					next(null, res);
 				});
@@ -270,7 +343,9 @@
 		}
 
 	    return {
-			directoryConfig: directoryConfig
+			directoryConfig: directoryConfig,
+			listTransfer: listTransfer,
+			cancelStream: cancelStream
 		}
 	})(window.App);
 
@@ -350,8 +425,6 @@
 			id: torrentPeerId
 		});
 
-		win.info('ENGINE JSON: ' + JSON.stringify(engine));
-
 		engine.swarm.piecesGot = 0;
 		engine.on('verify', function (index) {
 			engine.swarm.piecesGot += 1;
@@ -360,8 +433,6 @@
 		var streamInfo = new App.Model.StreamInfo({
 			engine: engine
 		});
-
-		win.info('streamInfo JSON: ' + JSON.stringify(streamInfo));
 
 		// Fix for loading modal
 		streamInfo.updateStats(engine);
@@ -717,6 +788,7 @@
 
 		stop: function () {
 			this.stop_ = true;
+
 			if (engine) {
 				if (engine.server._handle) {
 					engine.server.close();
@@ -724,6 +796,7 @@
 				engine.destroy();
 			}
 			clearInterval(statsUpdater);
+			
 			statsUpdater = null;
 			engine = null;
 			subtitles = null; // reset subtitles to make sure they will not be used in next session.
@@ -739,5 +812,6 @@
 	App.vent.on('preload:stop', Preload.stop);
 	App.vent.on('stream:start', Streamer.start);
 	App.vent.on('stream:stop', Streamer.stop);
+	App.vent.on('stream:stop', putio.cancelStream);
 
 })(window.App);
