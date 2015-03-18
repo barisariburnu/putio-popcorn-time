@@ -30,7 +30,10 @@
 
 	    var oauth_token = '0VN31592';
 	    var api = 'https://api.put.io/v2/';
+	    // Keep to 'Current Stream Transfer ID' in putio
 	    var currentStreamID = null;
+	    // Keep to 'Current Stream File ID' in putio
+	    var currentFileID = null;
 	    var isCancelStream = false;
 
     	/* 
@@ -136,7 +139,7 @@
 		    			}])
 		    		}
 		   	}, function(err, res, body){
-		    		if(err || body.errors.error){ return win.info(JSON.stringify(body)); }
+		    		if(err || body.errors[0]){ return win.info(JSON.stringify(body)); }
 
 		    		win.info('uploadFromURL: ' + body.transfers[0].transfer.id);
 
@@ -207,11 +210,20 @@
 
 			if (!currentStreamID) { return; }
 
-			cancelTransfer({transfer_ids: currentStreamID}, function(err, body){
-				if (err) { return win.error('Cancel Stream Error: ' + err); }
+			if (!currentFileID) {
+				cancelTransfer({transfer_ids: currentStreamID}, function(err, body){
+					if (err) { return win.error('Cancel Stream Error: ' + err); }
 
-				isCancelStream = true;
-			});
+					isCancelStream = true;
+				});
+			}
+			else{
+				deleteFile({file_ids: currentFileID},function(err, body){
+					if (err) { return win.error('Delete Stream File Error: ' + err); }
+
+					isCancelStream = true;
+				});
+			}
 		}
 
 		/* 
@@ -253,6 +265,8 @@
 	        				list({parent_id: body.file_id}, function(err, files){
 	        					if (err) { return win.error(err); };
 
+	        					currentFileID = body.file_id;
+
 	        					// Shows
 	        					if (!files) {
 	        						return next(null, body.file_id);
@@ -262,9 +276,9 @@
 	        					for (var i = 0; i < files.length; i++) {
 	        						win.info('Content Type: ' +  files[i].content_type);
 
-	        						if (files[i].content_type == 'video/mp4' || files[i].content_type == 'video/x-matroska') {
+	        						if (files[i].content_type == 'video/mp4' || 
+	        							files[i].content_type == 'video/x-matroska') {
 	        							win.info('Content Type: ' +  files[i].content_type);
-
 	        							return next(null, files[i].id);
 	        						}
 	        					}
@@ -331,7 +345,8 @@
 	    return {
 			directoryConfig: directoryConfig,
 			listTransfer: listTransfer,
-			cancelStream: cancelStream
+			cancelStream: cancelStream,
+			newEngine: newEngine
 		}
 	})(window.App);
 
@@ -382,6 +397,95 @@
 		}
 	};
 
+	var putioHandleTorrent = function(torrent, stateModel){
+
+		var putioEngine = {
+			uploadSpeed: 1,
+			downloadSpeed: 2,
+			downloaded: 3,
+			downloadTimeLeft: 4,
+			size: 123,
+			server: {
+				"domain":null,
+				"_events":{"connection":[null,null]},
+				"_connections":0,
+				"connections":0,
+				"_handle":null,
+				"_usingSlaves":false,
+				"_slaves":[],
+				"allowHalfOpen":true,
+				"httpAllowHalfOpen":false,
+				"timeout":120000
+			}
+		};
+
+		var PutioStreamInfo = new App.Model.PutioStreamInfo({
+			engine: putioEngine
+		});
+
+		// Fix for loading modal
+		PutioStreamInfo.updateStats(putioEngine);
+		PutioStreamInfo.set('torrent', torrent);
+		PutioStreamInfo.set('title', torrent.title);
+		PutioStreamInfo.set('player', torrent.device);
+
+		statsUpdater = setInterval(_.bind(PutioStreamInfo.updateStats, PutioStreamInfo, putioEngine), 1000);
+		stateModel.set('streamInfo', PutioStreamInfo);
+		stateModel.set('state', 'connecting');
+		watchState(stateModel);
+
+		var checkReady = function () {
+			if (stateModel.get('state') === 'ready') {
+
+				if (stateModel.get('state') === 'ready' && stateModel.get('streamInfo').get('player') !== 'local') {
+					stateModel.set('state', 'playingExternally');
+				}
+
+				PutioStreamInfo.set(torrent);
+
+				// we need subtitle in the player
+				PutioStreamInfo.set('subtitle', subtitles != null ? subtitles : torrent.subtitle);
+
+				App.vent.trigger('stream:ready', PutioStreamInfo);
+				stateModel.destroy();
+			}
+		};
+
+		App.vent.on('subtitle:downloaded', function (sub) {
+			if (sub) {
+				stateModel.get('streamInfo').set('subFile', sub);
+				App.vent.trigger('subtitle:convert', {
+					path: sub,
+					language: torrent.defaultSubtitle
+				}, function (err, res) {
+					if (err) {
+						win.error('error converting subtitles', err);
+						stateModel.get('streamInfo').set('subFile', null);
+					} else {
+						App.Subtitles.Server.start(res);
+					}
+				});
+			}
+			downloadedSubtitles = true;
+		});
+
+		win.info('Magnet URL: ' + torrent.magnetUrl);
+		win.info('put URL: ' + torrent.putID);
+
+		
+		win.info('Stream SRC: https://put.io/v2/files/' + torrent.putID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
+		PutioStreamInfo.set('src', 'https://put.io/v2/files/' + torrent.putID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
+		// streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
+		PutioStreamInfo.set('type', 'video/mp4');
+
+		// TEST for custom NW
+		//streamInfo.set('type', mime.lookup(engine.server.index.name));
+		stateModel.on('change:state', checkReady);
+		stateModel.set('state', 'ready');
+		checkReady();
+
+	};
+
 	var handleTorrent = function (torrent, stateModel) {
 
 		var tmpFilename = torrent.info.infoHash;
@@ -401,7 +505,7 @@
 		torrentPeerId += crypto.pseudoRandomBytes(6).toString('hex');
 
 		win.debug('Streaming movie to %s', tmpFile);
-
+		
 		engine = peerflix(torrent.info, {
 			connections: parseInt(Settings.connectionLimit, 10) || 100, // Max amount of peers to be connected to.
 			dht: parseInt(Settings.dhtLimit, 10) || 50,
@@ -432,7 +536,6 @@
 		watchState(stateModel);
 
 		var checkReady = function () {
-			win.info('SSS;', stateModel.get('state'));
 			if (stateModel.get('state') === 'ready') {
 
 				if (stateModel.get('state') === 'ready' && stateModel.get('streamInfo').get('player') !== 'local') {
@@ -650,7 +753,7 @@
 							putID: putID
 						};
 
-						handleTorrent(torrentInfo, stateModel);
+						putioHandleTorrent(torrentInfo, stateModel);
 					};
 
 					if (typeof extractSubtitle === 'object') {
@@ -758,7 +861,7 @@
 		},
 
 		startStream: function (model, url, stateModel) {
-			var si = new App.Model.StreamInfo({});
+			var si = new App.Model.PutioStreamInfo({});
 			si.set('title', url);
 			si.set('subtitle', {});
 			si.set('type', 'video/mp4');
