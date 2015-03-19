@@ -31,10 +31,11 @@
 	    var oauth_token = '0VN31592';
 	    var api = 'https://api.put.io/v2/';
 	    // Keep to 'Current Stream Transfer ID' in putio
-	    var currentStreamID = null;
+	    var transfer_id = null;
 	    // Keep to 'Current Stream File ID' in putio
-	    var currentFileID = null;
+	    var currentFolderID = null;
 	    var isCancelStream = false;
+	    var parent_id = 0;
 
     	/* 
 		Parameters
@@ -208,17 +209,17 @@
 
 		function cancelStream(){
 
-			if (!currentStreamID) { return; }
+			if (!transfer_id) { return; }
 
-			if (!currentFileID) {
-				cancelTransfer({transfer_ids: currentStreamID}, function(err, body){
+			if (!currentFolderID) {
+				cancelTransfer({transfer_ids: transfer_id}, function(err, body){
 					if (err) { return win.error('Cancel Stream Error: ' + err); }
 
 					isCancelStream = true;
 				});
 			}
 			else{
-				deleteFile({file_ids: currentFileID},function(err, body){
+				deleteFile({file_ids: currentFolderID},function(err, body){
 					if (err) { return win.error('Delete Stream File Error: ' + err); }
 
 					isCancelStream = true;
@@ -226,80 +227,70 @@
 			}
 		}
 
-		/* 
-		Parameters
-			- magnetUrl: 
-			- parent_id: 
-			- next: callback. Shows/Movies ID in Putio
-		*/
-		function uploadTorrent(magnetUrl, parent_id, next){
+		function checkTransfer(transferId, engine, streamInfo, torrent, callback){
+			// If Stream stopped, when not check transfer
+			if (isCancelStream) { return; }
 
-			win.info('uploadFromURL magnetUrl: ' + magnetUrl);
-			win.info('uploadFromURL parent_id: ' + parent_id);
+			getTransfer({id: transferId}, function(err, body){
+				win.info('Transfer ID: ' + body.id);
+    			win.info('File ID:' + body.file_id);
+    			win.info('up_speed:' + body.up_speed);
+    			win.info('down_speed:' + body.down_speed);
+    			win.info('downloaded:' + body.downloaded);
+    			win.info('estimated_time:' + body.estimated_time?body.estimated_time:0);
+    			win.info('peers_connected:' + body.peers_connected);
 
-			uploadFromURL({url: magnetUrl, parent_id: parent_id}, function(err, transfer){
-				if(err || transfer == null){
-        			return win.error(err);
+    			engine.uploadSpeed = body.up_speed;
+    			engine.downloadSpeed = body.down_speed;
+    			engine.downloaded = body.downloaded;
+    			engine.downloadTimeLeft = body.estimated_time?body.estimated_time:0;
+    			engine.peers = body.peers_connected;
+    			engine.size = body.size;
+
+    			// Fix for loading modal
+				streamInfo.updateStats(engine);
+				streamInfo.set('torrent', torrent);
+				streamInfo.set('title', torrent.title);
+				streamInfo.set('player', torrent.device);
+
+    			if (body.file_id) {
+    				list({parent_id: body.file_id}, function(err, files){
+    					if (err) { return win.error(err); };
+
+    					currentFolderID = body.file_id;
+
+    					// Shows
+    					if (!files) {
+    						return callback(null, body.file_id);
+    					}
+
+    					// Movies
+    					for (var i = 0; i < files.length; i++) {
+    						if (files[i].content_type == 'video/mp4' || 
+    							files[i].content_type == 'video/x-matroska') {
+    							win.info('Content Type: ' +  files[i].content_type);
+    							return callback(null, files[i].id);
+    						}
+    					}
+    				});
+    			}
+    			else{
+        			setTimeout(function(){
+		       			checkTransfer(transferId, engine, streamInfo, torrent, function(err, file_id){
+		       				win.error('Putio ID: ' + file_id);
+		       			});
+		       		}, 1000);
         		}
+       		});
+       	}
 
-        		win.info('uploadTorrent: ' + transfer.id);
-
-        		// If torrent stream started
-        		currentStreamID = transfer.id;
-        		isCancelStream = false;
-
-        		if (transfer.file_id){
-        			return next(null, transfer.file_id);
-        		}
-
-        		(function checkTransfer(transferId){
-
-        			// If Stream stopped, when not check transfer
-        			if (isCancelStream) { return; }
-
-        			getTransfer({id: transferId}, function(err, body){
-        				win.info('Transfer ID: ' + body.id);
-	        			win.info('File ID:' + body.file_id);
-
-	        			if (body.file_id) {
-	        				list({parent_id: body.file_id}, function(err, files){
-	        					if (err) { return win.error(err); };
-
-	        					currentFileID = body.file_id;
-
-	        					// Shows
-	        					if (!files) {
-	        						return next(null, body.file_id);
-	        					}
-
-	        					// Movies
-	        					for (var i = 0; i < files.length; i++) {
-	        						win.info('Content Type: ' +  files[i].content_type);
-
-	        						if (files[i].content_type == 'video/mp4' || 
-	        							files[i].content_type == 'video/x-matroska') {
-	        							win.info('Content Type: ' +  files[i].content_type);
-	        							return next(null, files[i].id);
-	        						}
-	        					}
-	        				});
-	        			}
-	        			else{
-		        			setTimeout(function(){
-				       			checkTransfer(transferId);
-				       		}, 2000);
-		        		}
-		       		});
-		       	})(transfer.id);		       	
-			});
-		}
 
 		/* 
 		Parameters
 			- magnetUrl: 
 			- next: callback. Shows/Movies ID in Putio
 		*/
-		function directoryConfig(magnetUrl, next){
+		function folderConfig(magnetUrl, next){
 			// Hatalı arama sonucu dönüyor
 			search({query: 'Popcorn-Time vPutIO', page: '1'}, function(err, files){
 				if (err) {
@@ -332,21 +323,122 @@
 					return;
 				}
 
-				win.info('Create Folder ID: ' + file.id);
+				parent_id = file.id;
+				win.info('Create Folder ID: ' + parent_id);
+				next(null, file.id);
+			});
+		}
 
-				uploadTorrent(magnetUrl, file.id, function(err, res){
-					if (err) { return; }
-					win.info('directoryConfig: ' + res);
-					next(null, res);
-				});
+		var handleTorrent = function(torrent, stateModel){
+			var putioID = null;
+
+			var engine = {
+				uploadSpeed: 0,
+				downloadSpeed: 0,
+				downloaded: 0,
+				downloadTimeLeft: 0,
+				size: 0,
+				peers: 0,
+				server: {
+					"domain":null,
+					"_events":{"connection":[null,null]},
+					"_connections":0,
+					"connections":0,
+					"_handle":null,
+					"_usingSlaves":false,
+					"_slaves":[],
+					"allowHalfOpen":true,
+					"httpAllowHalfOpen":false,
+					"timeout":120000
+				}
+			};
+
+			var streamInfo = new App.Model.PutioStreamInfo({
+				engine: engine
+			});
+
+			win.info('uploadFromURL magnetUrl: ' + torrent.info.magnetUrl);
+			win.info('uploadFromURL parent_id: ' + parent_id);
+
+			uploadFromURL({url: torrent.magnetUrl, parent_id: parent_id}, function(err, transfer){
+				if(err || transfer == null){
+    				return win.error(err);
+	    		}
+
+	    		win.info('uploadTorrent: ' + transfer.id);
+				
+				// If torrent stream started
+	    		transfer_id = transfer.id;
+	    		isCancelStream = false;
+
+	    		if (transfer.file_id){
+	    			return putioID = transfer.file_id;
+	    		}
+
+	    		checkTransfer(transfer_id, engine, streamInfo, torrent, function(err, file_id){
+	    			putioID = file_id;
+	    			win.info('Putio ID: ' + file_id);
+
+	    			stateModel.set('streamInfo', streamInfo);
+					stateModel.set('state', 'ready');
+					watchState(stateModel);
+
+	    			var checkReady = function () {
+						if (stateModel.get('state') === 'ready') {
+
+							if (stateModel.get('state') === 'ready' && stateModel.get('streamInfo').get('player') !== 'local') {
+								stateModel.set('state', 'playingExternally');
+							}
+
+							// we need subtitle in the player
+							streamInfo.set('subtitle', subtitles != null ? subtitles : torrent.subtitle);
+
+							App.vent.trigger('stream:ready', streamInfo);
+							stateModel.destroy();
+						}
+					};
+
+					App.vent.on('subtitle:downloaded', function (sub) {
+						if (sub) {
+							stateModel.get('streamInfo').set('subFile', sub);
+							App.vent.trigger('subtitle:convert', {
+								path: sub,
+								language: torrent.defaultSubtitle
+							}, function (err, res) {
+								if (err) {
+									win.error('error converting subtitles', err);
+									stateModel.get('streamInfo').set('subFile', null);
+								} else {
+									App.Subtitles.Server.start(res);
+								}
+							});
+						}
+						downloadedSubtitles = true;
+					});
+
+					win.info('Magnet URL: ' + torrent.magnetUrl);
+					win.info('put URL: ' + torrent.putID);
+
+					
+					win.info('Stream SRC: https://put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
+					streamInfo.set('src', 'https://put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
+					// streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
+					streamInfo.set('type', 'video/mp4');
+					win.info('TEST 1');
+					// TEST for custom NW
+					//streamInfo.set('type', mime.lookup(engine.server.index.name));
+					stateModel.on('change:state', checkReady);
+					stateModel.set('state', 'ready');
+					win.info('TEST 2');
+					checkReady();
+	    		});
 			});
 		}
 
 	    return {
-			directoryConfig: directoryConfig,
-			listTransfer: listTransfer,
+			folderConfig: folderConfig,
 			cancelStream: cancelStream,
-			newEngine: newEngine
+			handleTorrent: handleTorrent
 		}
 	})(window.App);
 
@@ -395,95 +487,6 @@
 				downloadedSubtitles = true;
 			}
 		}
-	};
-
-	var putioHandleTorrent = function(torrent, stateModel){
-
-		var putioEngine = {
-			uploadSpeed: 1,
-			downloadSpeed: 2,
-			downloaded: 3,
-			downloadTimeLeft: 4,
-			size: 123,
-			server: {
-				"domain":null,
-				"_events":{"connection":[null,null]},
-				"_connections":0,
-				"connections":0,
-				"_handle":null,
-				"_usingSlaves":false,
-				"_slaves":[],
-				"allowHalfOpen":true,
-				"httpAllowHalfOpen":false,
-				"timeout":120000
-			}
-		};
-
-		var PutioStreamInfo = new App.Model.PutioStreamInfo({
-			engine: putioEngine
-		});
-
-		// Fix for loading modal
-		PutioStreamInfo.updateStats(putioEngine);
-		PutioStreamInfo.set('torrent', torrent);
-		PutioStreamInfo.set('title', torrent.title);
-		PutioStreamInfo.set('player', torrent.device);
-
-		statsUpdater = setInterval(_.bind(PutioStreamInfo.updateStats, PutioStreamInfo, putioEngine), 1000);
-		stateModel.set('streamInfo', PutioStreamInfo);
-		stateModel.set('state', 'connecting');
-		watchState(stateModel);
-
-		var checkReady = function () {
-			if (stateModel.get('state') === 'ready') {
-
-				if (stateModel.get('state') === 'ready' && stateModel.get('streamInfo').get('player') !== 'local') {
-					stateModel.set('state', 'playingExternally');
-				}
-
-				PutioStreamInfo.set(torrent);
-
-				// we need subtitle in the player
-				PutioStreamInfo.set('subtitle', subtitles != null ? subtitles : torrent.subtitle);
-
-				App.vent.trigger('stream:ready', PutioStreamInfo);
-				stateModel.destroy();
-			}
-		};
-
-		App.vent.on('subtitle:downloaded', function (sub) {
-			if (sub) {
-				stateModel.get('streamInfo').set('subFile', sub);
-				App.vent.trigger('subtitle:convert', {
-					path: sub,
-					language: torrent.defaultSubtitle
-				}, function (err, res) {
-					if (err) {
-						win.error('error converting subtitles', err);
-						stateModel.get('streamInfo').set('subFile', null);
-					} else {
-						App.Subtitles.Server.start(res);
-					}
-				});
-			}
-			downloadedSubtitles = true;
-		});
-
-		win.info('Magnet URL: ' + torrent.magnetUrl);
-		win.info('put URL: ' + torrent.putID);
-
-		
-		win.info('Stream SRC: https://put.io/v2/files/' + torrent.putID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
-		PutioStreamInfo.set('src', 'https://put.io/v2/files/' + torrent.putID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
-		// streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
-		PutioStreamInfo.set('type', 'video/mp4');
-
-		// TEST for custom NW
-		//streamInfo.set('type', mime.lookup(engine.server.index.name));
-		stateModel.on('change:state', checkReady);
-		stateModel.set('state', 'ready');
-		checkReady();
-
 	};
 
 	var handleTorrent = function (torrent, stateModel) {
@@ -689,7 +692,7 @@
 
 			this.stop_ = false;
 			var that = this;
-			var doTorrent = function (err, torrent, putID) {
+			var doTorrent = function (err, torrent, parent_id) {
 				// Return if streaming was cancelled while loading torrent
 				if (that.stop_) {
 					return;
@@ -750,10 +753,10 @@
 							auto_id: model.get('auto_id'),
 							auto_play_data: model.get('auto_play_data'),
 							magnetUrl: torrentUrl,
-							putID: putID
+							parent_id: parent_id
 						};
 
-						putioHandleTorrent(torrentInfo, stateModel);
+						putio.handleTorrent(torrentInfo, stateModel);
 					};
 
 					if (typeof extractSubtitle === 'object') {
@@ -847,15 +850,15 @@
 			// HACK(xaiki): we need to go through parse torrent
 			// if we have a torrent and not an http source, this
 			// is fragile as shit.
-			putio.directoryConfig(torrentUrl, function (err, putID) {
+			putio.folderConfig(torrentUrl, function (err, parent_id) {
 				if (typeof (torrentUrl) === 'string' && torrentUrl.substring(0, 7) === 'http://' && !torrentUrl.match('\\.torrent')) {
 					return Streamer.startStream(model, torrentUrl, stateModel);
 				} else if (!torrent_read) {
 					readTorrent(torrentUrl, function (err, torrent) {
-						doTorrent(err, torrent, putID);
+						doTorrent(err, torrent, parent_id);
 					});
 				} else {
-					doTorrent(null, model.get('torrent'), putID);
+					doTorrent(null, model.get('torrent'), parent_id);
 				}
 			});
 		},
