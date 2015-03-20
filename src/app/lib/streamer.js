@@ -227,11 +227,13 @@
 			}
 		}
 
-		function checkTransfer(transferId, engine, streamInfo, torrent, callback){
+		function checkTransfer(engine, streamInfo, torrent, stateModel, callback){
 			// If Stream stopped, when not check transfer
 			if (isCancelStream) { return; }
 
-			getTransfer({id: transferId}, function(err, body){
+			win.info('quality: ' + torrent.quality);
+
+			getTransfer({id: transfer_id}, function(err, body){
 				win.info('Transfer ID: ' + body.id);
     			win.info('File ID:' + body.file_id);
     			win.info('up_speed:' + body.up_speed);
@@ -252,6 +254,7 @@
 				streamInfo.set('torrent', torrent);
 				streamInfo.set('title', torrent.title);
 				streamInfo.set('player', torrent.device);
+				stateModel.set('state', 'downloading');
 
     			if (body.file_id) {
     				list({parent_id: body.file_id}, function(err, files){
@@ -276,9 +279,7 @@
     			}
     			else{
         			setTimeout(function(){
-		       			checkTransfer(transferId, engine, streamInfo, torrent, function(err, file_id){
-		       				win.error('Putio ID: ' + file_id);
-		       			});
+		       			checkTransfer(engine, streamInfo, torrent, stateModel, callback);
 		       		}, 1000);
         		}
        		});
@@ -375,7 +376,7 @@
 	    			return putioID = transfer.file_id;
 	    		}
 
-	    		checkTransfer(transfer_id, engine, streamInfo, torrent, function(err, file_id){
+	    		checkTransfer(engine, streamInfo, torrent, stateModel, function(err, file_id){
 	    			putioID = file_id;
 	    			win.info('Putio ID: ' + file_id);
 
@@ -419,16 +420,15 @@
 					win.info('Magnet URL: ' + torrent.magnetUrl);
 					win.info('put URL: ' + torrent.putID);
 
-					
-					win.info('Stream SRC: https://put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
-					streamInfo.set('src', 'https://put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
+					https://api.put.io/v2/files/281897751/stream
+					win.info('Stream SRC: https://api.put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
+					streamInfo.set('src', 'https://api.put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
 					// streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
 					streamInfo.set('type', 'video/mp4');
 					win.info('TEST 1');
 					// TEST for custom NW
 					//streamInfo.set('type', mime.lookup(engine.server.index.name));
 					stateModel.on('change:state', checkReady);
-					stateModel.set('state', 'ready');
 					win.info('TEST 2');
 					checkReady();
 	    		});
