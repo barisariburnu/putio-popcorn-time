@@ -84,6 +84,7 @@
 
 			this.initKeyboardShortcuts();
 		},
+
 		onStateUpdate: function () {
 			var self = this;
 			var state = this.model.get('state');
@@ -93,7 +94,7 @@
 			this.ui.stateTextDownload.text(i18n.__(state));
 
 			if (state === 'downloading') {
-				this.listenTo(this.model.get('streamInfo'), 'change:downloaded', this.onProgressUpdate);
+				this.listenTo(this.model.get('streamInfo'), 'change:buffer_percent', this.onProgressUpdate);
 			}
 
 			if (state === 'playingExternally') {
@@ -119,11 +120,15 @@
 
 		onProgressUpdate: function () {
 
+			
+
 			// TODO: Translate peers / seeds in the template
 			this.ui.seedStatus.css('visibility', 'visible');
 			var streamInfo = this.model.get('streamInfo');
 			var downloaded = streamInfo.get('downloaded') / (1024 * 1024);
 			this.ui.progressTextDownload.text(downloaded.toFixed(2) + ' Mb');
+
+			win.info('Percent:' + streamInfo.get('buffer_percent').toFixed());
 
 			this.ui.progressTextPeers.text(streamInfo.get('active_peers'));
 			this.ui.progressTextSeeds.text(streamInfo.get('total_peers'));

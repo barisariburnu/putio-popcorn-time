@@ -227,34 +227,39 @@
 			}
 		}
 
-		function checkTransfer(engine, streamInfo, torrent, stateModel, callback){
+		function checkTransfer(streamInfo, torrent, stateModel, callback){
 			// If Stream stopped, when not check transfer
 			if (isCancelStream) { return; }
 
-			win.info('quality: ' + torrent.quality);
+			stateModel.set('streamInfo', streamInfo);
+			stateModel.set('state', 'downloading');
 
 			getTransfer({id: transfer_id}, function(err, body){
-				win.info('Transfer ID: ' + body.id);
-    			win.info('File ID:' + body.file_id);
-    			win.info('up_speed:' + body.up_speed);
-    			win.info('down_speed:' + body.down_speed);
-    			win.info('downloaded:' + body.downloaded);
-    			win.info('estimated_time:' + body.estimated_time?body.estimated_time:0);
-    			win.info('peers_connected:' + body.peers_connected);
+				// win.info('Transfer ID: ' + body.id);
+    			// win.info('File ID:' + body.file_id);
+    			// win.info('up_speed:' + body.up_speed);
+    			// win.info('down_speed:' + body.down_speed);
+    			win.info('percent_done:' + body.percent_done);
+    			// win.info('estimated_time:' + body.estimated_time?body.estimated_time:0);
+    			// win.info('peers_connected:' + body.peers_connected);
 
+    			var engine = streamInfo.get('engine');
     			engine.uploadSpeed = body.up_speed;
     			engine.downloadSpeed = body.down_speed;
     			engine.downloaded = body.downloaded;
     			engine.downloadTimeLeft = body.estimated_time?body.estimated_time:0;
-    			engine.peers = body.peers_connected;
     			engine.size = body.size;
+    			engine.percent_done = body.percent_done;
+    			engine.peers_sending_to_us = body.peers_sending_to_us;
+    			engine.peers_connected = body.peers_connected;
+    			streamInfo.set('engine', engine);
 
     			// Fix for loading modal
-				streamInfo.updateStats(engine);
+    			streamInfo.set('quality', torrent.quality);
+				streamInfo.updateStats();
 				streamInfo.set('torrent', torrent);
 				streamInfo.set('title', torrent.title);
 				streamInfo.set('player', torrent.device);
-				stateModel.set('state', 'downloading');
 
     			if (body.file_id) {
     				list({parent_id: body.file_id}, function(err, files){
@@ -279,7 +284,7 @@
     			}
     			else{
         			setTimeout(function(){
-		       			checkTransfer(engine, streamInfo, torrent, stateModel, callback);
+		       			checkTransfer(streamInfo, torrent, stateModel, callback);
 		       		}, 1000);
         		}
        		});
@@ -333,29 +338,21 @@
 		var handleTorrent = function(torrent, stateModel){
 			var putioID = null;
 
-			var engine = {
-				uploadSpeed: 0,
-				downloadSpeed: 0,
-				downloaded: 0,
-				downloadTimeLeft: 0,
-				size: 0,
-				peers: 0,
-				server: {
-					"domain":null,
-					"_events":{"connection":[null,null]},
-					"_connections":0,
-					"connections":0,
-					"_handle":null,
-					"_usingSlaves":false,
-					"_slaves":[],
-					"allowHalfOpen":true,
-					"httpAllowHalfOpen":false,
-					"timeout":120000
-				}
-			};
-
 			var streamInfo = new App.Model.PutioStreamInfo({
-				engine: engine
+				engine: {
+					server: {
+						"domain":null,
+						"_events":{"connection":[null,null]},
+						"_connections":0,
+						"connections":0,
+						"_handle":null,
+						"_usingSlaves":false,
+						"_slaves":[],
+						"allowHalfOpen":true,
+						"httpAllowHalfOpen":false,
+						"timeout":120000
+					}
+				}
 			});
 
 			win.info('uploadFromURL magnetUrl: ' + torrent.info.magnetUrl);
@@ -376,13 +373,12 @@
 	    			return putioID = transfer.file_id;
 	    		}
 
-	    		checkTransfer(engine, streamInfo, torrent, stateModel, function(err, file_id){
+	    		checkTransfer(streamInfo, torrent, stateModel, function(err, file_id){
 	    			putioID = file_id;
 	    			win.info('Putio ID: ' + file_id);
 
 	    			stateModel.set('streamInfo', streamInfo);
 					stateModel.set('state', 'ready');
-					watchState(stateModel);
 
 	    			var checkReady = function () {
 						if (stateModel.get('state') === 'ready') {
@@ -425,11 +421,9 @@
 					streamInfo.set('src', 'https://api.put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
 					// streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
 					streamInfo.set('type', 'video/mp4');
-					win.info('TEST 1');
 					// TEST for custom NW
 					//streamInfo.set('type', mime.lookup(engine.server.index.name));
 					stateModel.on('change:state', checkReady);
-					win.info('TEST 2');
 					checkReady();
 	    		});
 			});

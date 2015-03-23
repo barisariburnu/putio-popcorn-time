@@ -2,7 +2,9 @@
 	'use strict';
 
 	var PutioStreamInfo = Backbone.Model.extend({
-		initialize: function () { },
+		initialize: function () {
+			this.set('buffer_percent', null);
+		},
 
 		updateStats: function () {
 			var active = function (wire) {
@@ -15,7 +17,7 @@
 			var buffer_percent = 0;
 			var engine = this.get('engine');
 
-			win.info('Engine: ' + JSON.stringify(engine));
+			//win.info('Engine: ' + JSON.stringify(engine));
 
 			var upload_speed = engine.uploadSpeed; // upload speed
 			var final_upload_speed = '0 B/s';
@@ -50,20 +52,15 @@
 			}
 
 			this.set('downloaded', downloaded);
-			this.set('active_peers', 1);
-			this.set('total_peers', 1);
-
+			this.set('active_peers', engine.peers_sending_to_us);
+			this.set('total_peers', engine.peers_connected);
+			this.set('quality', engine.quality);
 			this.set('uploadSpeed', final_upload_speed); // variable for Upload Speed
 			this.set('downloadSpeed', final_download_speed); // variable for Download Speed
 			this.set('downloadedFormatted', final_downloaded); // variable for Downloaded
 			this.set('downloadedPercent', final_downloaded_percent); // variable for Downloaded percentage
 			this.set('time_left', downloadTimeLeft); // variable for time left before 100% downloaded
-
-			buffer_percent = downloaded / (BUFFERING_SIZE / 100);
-			if (buffer_percent >= 100) {
-				buffer_percent = 99; // wait for subtitles
-			}
-			this.set('buffer_percent', buffer_percent);
+			this.set('buffer_percent', engine.percent_done);
 		}
 	});
 
