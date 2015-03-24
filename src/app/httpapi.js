@@ -4,6 +4,8 @@
 	var server;
 	var lang;
 	var nativeWindow = require('nw.gui').Window.get();
+	var fs = require('fs');
+	var fe = require('fs-extra');
 	var httpServer;
 	var Q = require('q');
 
@@ -676,8 +678,26 @@
 		callback(err, result);
 	}
 
+	function getPutioToken() {
+		if (App.settings['accessToken']) { return document.querySelector('#putioToken').value = App.settings['accessToken']; }
+		
+		var filePath = App.settings['databaseLocation'] + '/accessToken.JSON';
+
+		fs.exists(filePath, function(exists) { 
+			if (!exists) { return; }
+
+			fe.readJson(filePath, function(err, data) {
+				App.settings['accessToken'] = data.accessToken;
+				win.info('data: ' + JSON.stringify(data));
+			});
+
+				win.info('Settings.accessToken: ' + App.settings['accessToken']);
+		});
+	}
+
 	App.vent.on('initHttpApi', function () {
 		win.info('Initializing HTTP API server');
+		getPutioToken();
 		initServer().then(function () {
 			server.enableAuth(Settings.httpApiUsername, Settings.httpApiPassword);
 			if (httpServer) {

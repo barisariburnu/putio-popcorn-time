@@ -27,9 +27,6 @@
 	    // Must be installed
 	    var fs = require('fs-extra');
 	    var fd = require('fs');
-
-	    var oauth_token = '0VN31592';
-	    var api = 'https://api.put.io/v2/';
 	    // Keep to 'Current Stream Transfer ID' in putio
 	    var transfer_id = null;
 	    // Keep to 'Current Stream File ID' in putio
@@ -42,11 +39,11 @@
 			- parent_id: ID of the folder you’d like to list. This defaults to the root directory (which has ID number 0)
 		*/
 		function list(parameters, callback){
-			request(api + 'files/list', {
+			request(App.settings['putioAPI'] + 'files/list', {
 		        method:'GET',
 		        json: true,
 		        qs: {
-		            oauth_token: oauth_token,
+		            oauth_token: App.settings['accessToken'],
 		            parent_id: parameters.parent_id ? parameters.parent_id : 0
 		        }
 		    }, function(err, res, body){
@@ -62,11 +59,11 @@
 			- page:	Optional. Defaults to 1. If -1 given, returns all results at a time
 		*/
 		function search(parameters, callback){
-			request(api + 'files/search/' + parameters.query + '/page/' + (parameters.page ? parameters.page : '1'), {
+			request(App.settings['putioAPI'] + 'files/search/' + parameters.query + '/page/' + (parameters.page ? parameters.page : '1'), {
 		        method:'GET',
 		        json: true,
 		        qs: {
-		            oauth_token: oauth_token
+		            oauth_token: App.settings['accessToken']
 		        }
 		    }, function(err, res, body){
 		        if(err){ return callback(err); }
@@ -81,11 +78,11 @@
 			- parent_id: Location of the new folder
 		*/
 		function createFolder(parameters, callback){
-			request(api + 'files/create-folder', {
+			request(App.settings['putioAPI'] + 'files/create-folder', {
 		    		method:'POST',
 		    		json: true,
 		    		qs: {
-		    			oauth_token: oauth_token
+		    			oauth_token: App.settings['accessToken']
 		    		},
 		    		formData: {
 						"name": parameters.name,
@@ -93,7 +90,7 @@
 		    		}
 		   	}, function(err, res, body){
 		    		if(err){ return callback(err); }
-
+		    		win.info('file: ' + body.file + ' streamToken: ' + App.settings['streamToken']);
 		    		callback(null, body.file);
 		   		});
 		}
@@ -103,11 +100,11 @@
 			- file_ids:	File ids separated by commas. Ex: 1,2,3,4
 		*/
 		function deleteFile(parameters, callback){
-			request(api + 'files/delete', {
+			request(App.settings['putioAPI'] + 'files/delete', {
 		    		method:'POST',
 		    		json: true,
 		    		qs: {
-		    			oauth_token: oauth_token
+		    			oauth_token: App.settings['accessToken']
 		    		},
 		    		formData: {
 						"file_ids": parameters.file_ids
@@ -125,11 +122,11 @@
 			- parent_id: Location of the uploaded file. This defaults to 0 (which means root)
 		*/
 		function uploadFromURL(parameters, callback){
-			request(api + 'transfers/add-multi', {
+			request(App.settings['putioAPI'] + 'transfers/add-multi', {
 		    		method:'POST',
 		    		json: true,
 		    		qs: {
-		    			oauth_token: oauth_token
+		    			oauth_token: App.settings['accessToken']
 		    		},
 		    		formData: {
 		    			urls: JSON.stringify([{
@@ -153,11 +150,11 @@
 			- id: Transfer id
 		*/
 		function getTransfer(parameters, callback){
-			request(api + 'transfers/' + parameters.id, {
+			request(App.settings['putioAPI'] + 'transfers/' + parameters.id, {
 		        method:'GET',
 		        json: true,
 		        qs: {
-		            oauth_token: oauth_token
+		            oauth_token: App.settings['accessToken']
 		        }
 		    }, function(err, res, body){
 		        if(err){ return callback(err); }
@@ -173,11 +170,11 @@
 			- transfer_ids: Transfer ids separated by commas. Ex: 1,2,3,4
 		*/
 		function cancelTransfer(parameters, callback){
-			request(api + 'transfers/cancel', {
+			request(App.settings['putioAPI'] + 'transfers/cancel', {
 		    		method:'POST',
 		    		json: true,
 		    		qs: {
-		    			oauth_token: oauth_token
+		    			oauth_token: App.settings['accessToken']
 		    		},
 		    		formData: {
 		    			"transfer_ids": parameters.transfer_ids
@@ -194,11 +191,11 @@
 			- Lists active transfers. If transfer is completed, it is removed from the list
 		*/
 		function listTransfer(parameters, callback){
-			request(api + 'transfers/list', {
+			request(App.settings['putioAPI'] + 'transfers/list', {
 		        method:'GET',
 		        json: true,
 		        qs: {
-		            oauth_token: oauth_token
+		            oauth_token: App.settings['accessToken']
 		        }
 		    }, function(err, res, body){
 		        if(err){ return callback(err); }
@@ -311,11 +308,11 @@
 
 					win.info('Delete File Id: ' + files[i].id);
 
-					request(api + 'files/delete', {
+					request(App.settings['putioAPI'] + 'files/delete', {
 		        		method:'POST',
 		            	json: true,
 		        		qs: {
-		        			oauth_token: oauth_token
+		        			oauth_token: App.settings['accessToken']
 		        		},
 		        		formData: {
 		        			"file_ids": files[i].id
@@ -325,10 +322,10 @@
 			});
 
 			createFolder({name: 'Popcorn-Time vPutIO', parent_id: '0'}, function(err, file) {
-				if (err) {
+				if (err || !file) {
 					return;
 				}
-
+				
 				parent_id = file.id;
 				win.info('Create Folder ID: ' + parent_id);
 				next(null, file.id);
@@ -417,8 +414,8 @@
 					win.info('put URL: ' + torrent.putID);
 
 					https://api.put.io/v2/files/281897751/stream
-					win.info('Stream SRC: https://api.put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
-					streamInfo.set('src', 'https://api.put.io/v2/files/' + putioID + '/stream?token=48013f0ab8f611e4b9360a2fd1190fc5');
+					win.info('Stream SRC: https://api.put.io/v2/files/' + putioID + '/stream?oauth_token=' + App.settings['accessToken']);
+					streamInfo.set('src', 'https://api.put.io/v2/files/' + putioID + '/stream?oauth_token=' + App.settings['accessToken']);
 					// streamInfo.set('src', 'http://127.0.0.1:' + engine.server.address().port + '/');
 					streamInfo.set('type', 'video/mp4');
 					// TEST for custom NW

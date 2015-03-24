@@ -59,7 +59,7 @@ Settings.syncOnStart = false;
 
 // Putio Settings
 Settings.accessToken = null;
-Settings.streamToken = null;
+Settings.putioAPI = 'https://api.put.io/v2/';
 
 // Advanced options
 Settings.connectionLimit = 100;
