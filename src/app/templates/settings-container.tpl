@@ -107,7 +107,7 @@
 		<div class="content">
 			<div class="putio-options">
 				<span>
-					<a href='https://put.io/v2/oauth2/apptoken/1927' data-toggle="tooltip" data-placement="top" title="https://put.io/v2/oauth2/apptoken/1927" class='links blog_icon'><%= i18n.__("Enter your access token. Click here for take your token.") %></a>
+					<a href='https://put.io/v2/oauth2/apptoken/1966' data-toggle="tooltip" data-placement="top" title="https://put.io/v2/oauth2/apptoken/1966" class='links blog_icon'><%= i18n.__("Enter your access token. Click here for take your token.") %></a>
 				</span>
 				<span>
 					<p><%= i18n.__("Access Token") + ":" %></p>

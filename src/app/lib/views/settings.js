@@ -230,8 +230,10 @@
 				break;
 			case 'traktUsername':
 			case 'traktPassword':
-			case 'putioToken':
 				return;
+			case 'putioToken':
+				value = document.querySelector('#putioToken').value;
+				break;
 			case 'tmpLocation':
 				tmpLocationChanged = true;
 				value = path.join(field.val(), 'Popcorn-Time');
@@ -657,8 +659,6 @@
 		},
 
 		createPutioToken: function() {
-			if (!(document.querySelector('#putioToken').value)) { return win.info('Access token value is null'); }
-
 			var accessToken = document.querySelector('#putioToken').value;
 			var streamToken = null;
 			var filePath = App.settings['databaseLocation'] + '/accessToken.JSON';

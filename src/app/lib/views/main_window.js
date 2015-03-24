@@ -319,9 +319,13 @@
 		},
 
 		showMovieDetail: function (movieModel) {
-			this.MovieDetail.show(new App.View.MovieDetail({
+			if (App.settings['accessToken']) {
+				return this.MovieDetail.show(new App.View.MovieDetail({
 				model: movieModel
 			}));
+			}
+			
+			this.showSettings();
 		},
 
 		closeMovieDetail: function (movieModel) {
@@ -330,9 +334,13 @@
 		},
 
 		showShowDetail: function (showModel) {
-			this.MovieDetail.show(new App.View.ShowDetail({
-				model: showModel
-			}));
+			if (App.settings['accessToken']) {
+				return this.MovieDetail.show(new App.View.ShowDetail({
+					model: showModel
+				}));
+			}
+			
+			this.showSettings();
 		},
 
 		closeShowDetail: function (showModel) {
