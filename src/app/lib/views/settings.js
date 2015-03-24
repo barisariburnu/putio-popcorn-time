@@ -43,7 +43,7 @@
 			'click .qr-code': 'generateQRcode',
 			'click #qrcode-overlay': 'closeModal',
 			'click #qrcode-close': 'closeModal',
-			'click .access-token': 'createAccessToken'
+			'click .access-token': 'createPutioToken'
 		},
 
 		onShow: function () {
@@ -63,6 +63,8 @@
 				App.vent.trigger('settings:close');
 			});
 			that = this;
+
+			that.getPutioToken();
 
 			AdvSettings.set('ipAddress', this.getIPAddress());
 		},
@@ -228,6 +230,7 @@
 				break;
 			case 'traktUsername':
 			case 'traktPassword':
+			case 'putioToken':
 				return;
 			case 'tmpLocation':
 				tmpLocationChanged = true;
@@ -653,32 +656,37 @@
 			return ip;
 		},
 
-		createAccessToken: function() {
+		createPutioToken: function() {
+			if (!(document.querySelector('#putioToken').value)) { return win.info('Access token value is null'); }
+
 			var accessToken = document.querySelector('#putioToken').value;
+			var streamToken = null;
+			var filePath = App.settings['databaseLocation'] + '/accessToken.JSON';
+			
+			App.settings['accessToken'] = accessToken;
+			App.settings['streamToken'] = streamToken;
+
+			fe.outputJson(filePath, { accessToken: accessToken, streamToken: App.settings['streamToken']}, function(err) {
+				if (err) { return win.info(err); } 
+			});
+
+			
+			win.info('document: ' + document.querySelector('#putioToken').value);
+		},
+
+		getPutioToken: function() {
+			if (App.settings['accessToken']) { return document.querySelector('#putioToken').value = App.settings['accessToken']; }
+			
 			var filePath = App.settings['databaseLocation'] + '/accessToken.JSON';
 
-			win.info('document: ' + document.querySelector('#putioToken').value);
-
-			if (App.settings['accessToken']) { return; }
-
-			win.info('filePath: ' + filePath);
-
 			fs.exists(filePath, function(exists) { 
-  				if (exists) { 
-    				fe.readJson(filePath, function(err, data) {
-						App.settings['accessToken'] = data.accessToken;
-						win.info('data: ' + JSON.stringify(data));
-					});
-  				}
-  				else{
-  					App.settings['accessToken'] = document.querySelector('#putioToken').value;
+				if (!exists) { return; }
 
-  					win.info('accessToken: ' + document.querySelector('#putioToken').value);
+				fe.readJson(filePath, function(err, data) {
+					App.settings['accessToken'] = data.accessToken;
+					win.info('data: ' + JSON.stringify(data));
+				});
 
-  					fe.outputJson(filePath, { accessToken: App.settings['accessToken'] }, function(err) {
-  						if (err) { return win.info(err); } 
-  					});
-  				}
   				win.info('Settings.accessToken: ' + App.settings['accessToken']);
 			});
 		}
