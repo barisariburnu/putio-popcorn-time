@@ -57,6 +57,10 @@ Settings.traktPassword = '';
 Settings.traktTvVersion = '0.0.2';
 Settings.syncOnStart = false;
 
+// Putio Settings
+Settings.accessToken = null;
+Settings.streamToken = null;
+
 // Advanced options
 Settings.connectionLimit = 100;
 Settings.dhtLimit = 500;

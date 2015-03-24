@@ -42,7 +42,8 @@
 			'click #syncTrakt': 'syncTrakt',
 			'click .qr-code': 'generateQRcode',
 			'click #qrcode-overlay': 'closeModal',
-			'click #qrcode-close': 'closeModal'
+			'click #qrcode-close': 'closeModal',
+			'click .access-token': 'createAccessToken'
 		},
 
 		onShow: function () {
@@ -650,6 +651,36 @@
 				});
 			}
 			return ip;
+		},
+
+		createAccessToken: function() {
+			var accessToken = document.querySelector('#putioToken').value;
+			var filePath = App.settings['databaseLocation'] + '/accessToken.JSON';
+
+			win.info('document: ' + document.querySelector('#putioToken').value);
+
+			if (App.settings['accessToken']) { return; }
+
+			win.info('filePath: ' + filePath);
+
+			fs.exists(filePath, function(exists) { 
+  				if (exists) { 
+    				fe.readJson(filePath, function(err, data) {
+						App.settings['accessToken'] = data.accessToken;
+						win.info('data: ' + JSON.stringify(data));
+					});
+  				}
+  				else{
+  					App.settings['accessToken'] = document.querySelector('#putioToken').value;
+
+  					win.info('accessToken: ' + document.querySelector('#putioToken').value);
+
+  					fe.outputJson(filePath, { accessToken: App.settings['accessToken'] }, function(err) {
+  						if (err) { return win.info(err); } 
+  					});
+  				}
+  				win.info('Settings.accessToken: ' + App.settings['accessToken']);
+			});
 		}
 	});
 

@@ -102,6 +102,33 @@
 		</div>
 	</section>
 
+	<section id="putio">
+		<div class="title"><%= i18n.__("Put.io") %></div>
+		<div class="content">
+			<div class="putio-options">
+				<span>
+					<a href='https://put.io/v2/oauth2/apptoken/1927' data-toggle="tooltip" data-placement="top" title="https://put.io/v2/oauth2/apptoken/1927" class='links blog_icon'><%= i18n.__("Enter your access token. Click here for take your token.") %></a>
+				</span>
+				<span>
+					<p><%= i18n.__("Access Token") + ":" %></p>
+					<input type="text" size="50" id="putioToken" name="putioToken">
+						<div class="loading-spinner" style="display: none"></div>
+						<div class="valid-tick" style="display: none"></div>
+						<div class="invalid-cross" style="display: none"></div>
+				</span>
+				<span>
+					<em><%= i18n.__("Popcorn Time stores access token in your local database") %></em>
+				</span>
+			</div>
+			<div class="btns advanced database">
+				<div class="btn-settings database access-token">
+					<i class="fa fa-qrcode">&nbsp;&nbsp;</i>
+					<%= i18n.__("Save Local Database") %>
+				</div>
+			</div>
+		</div>
+	</section>
+
 	<section id="subtitles">
 		<div class="title"><%= i18n.__("Subtitles") %></div>
 		<div class="content">
