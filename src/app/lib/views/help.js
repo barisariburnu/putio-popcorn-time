@@ -8,7 +8,7 @@
 
 		events: {
 			'click .close-icon': 'closeHelp',
-			'click a': 'links'
+			'click #in-app-reporter': 'reportIssue'
 		},
 
 		initialize: function () {
@@ -36,15 +36,14 @@
 			$('.randomized-dyk').html(dyk);
 		},
 
+		reportIssue: function () {
+			App.vent.trigger('issue:new');
+		},
+
 		onClose: function () {},
 
 		closeHelp: function () {
 			App.vent.trigger('help:close');
-		},
-
-		links: function (e) {
-			e.preventDefault();
-			gui.Shell.openExternal($(e.currentTarget).attr('href'));
 		}
 
 	});

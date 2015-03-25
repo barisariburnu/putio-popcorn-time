@@ -114,7 +114,7 @@
 			images.poster = resizeImage(images.poster, '300');
 			//}
 
-			App.vent.on('shortcuts:show', function () {
+			App.vent.on('shortcuts:shows', function () {
 				_this.initKeyboardShortcuts();
 			});
 		},
@@ -384,12 +384,13 @@
 			} else {
 				episodes_data = null;
 			}
+
 			var torrentStart = new Backbone.Model({
 				torrent: $(e.currentTarget).attr('data-torrent'),
 				backdrop: that.model.get('images').fanart,
 				type: 'episode',
-				tvdb_id: that.model.get('tvdb_id'),
-				imdb_id: that.model.get('imdb_id'),
+				tvdb_id: 'adasd' || that.model.get('tvdb_id'),
+				imdb_id: 'adasd2' || that.model.get('imdb_id'),
 				episode: episode,
 				season: season,
 				title: title,
@@ -416,6 +417,7 @@
 			}
 			_this.unbindKeyboardShortcuts();
 			App.vent.trigger('show:closeDetail');
+			App.vent.trigger('shortcuts:movies');
 		},
 
 		clickSeason: function (e) {

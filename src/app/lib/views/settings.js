@@ -5,6 +5,7 @@
 	var AdmZip = require('adm-zip');
 	var fdialogs = require('node-webkit-fdialogs');
 	var fs = require('fs');
+	var fe = require('fs-extra');
 	var waitComplete;
 	var oldTmpLocation;
 
@@ -22,6 +23,7 @@
 
 		events: {
 			'click .keyboard': 'showKeyboard',
+			'click .token': 'showToken',
 			'click .help': 'showHelp',
 			'click .close-icon': 'closeSettings',
 			'change select,input': 'saveSetting',
@@ -157,6 +159,10 @@
 			App.vent.trigger('keyboard:toggle');
 		},
 
+		showToken: function () {
+			App.vent.trigger('token:toggle');
+		},
+
 		saveSetting: function (e) {
 			var value = false;
 			var data = {};
@@ -188,6 +194,7 @@
 			case 'subtitle_size':
 			case 'tv_detail_jump_to':
 			case 'subtitle_language':
+			case 'subtitle_decoration':
 			case 'movies_quality':
 			case 'subtitle_font':
 			case 'start_screen':
@@ -209,7 +216,6 @@
 			case 'showAdvancedSettings':
 			case 'alwaysOnTop':
 			case 'syncOnStart':
-			case 'subtitle_shadows':
 			case 'playNextEpisodeAuto':
 			case 'automaticUpdating':
 			case 'events':
@@ -660,13 +666,11 @@
 
 		createPutioToken: function() {
 			var accessToken = document.querySelector('#putioToken').value;
-			var streamToken = null;
 			var filePath = App.settings['databaseLocation'] + '/accessToken.JSON';
 			
 			App.settings['accessToken'] = accessToken;
-			App.settings['streamToken'] = streamToken;
 
-			fe.outputJson(filePath, { accessToken: accessToken, streamToken: App.settings['streamToken']}, function(err) {
+			fe.outputJson(filePath, { accessToken: accessToken}, function(err) {
 				if (err) { return win.info(err); } 
 			});
 

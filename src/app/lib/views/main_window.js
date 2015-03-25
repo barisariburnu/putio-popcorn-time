@@ -20,7 +20,8 @@
 			About: '#about-container',
 			Keyboard: '#keyboard-container',
 			Help: '#help-container',
-			TorrentCollection: '#torrent-collection-container'
+			TorrentCollection: '#torrent-collection-container',
+			Issue: '#issue-container'
 		},
 
 		ui: {
@@ -80,6 +81,10 @@
 			App.vent.on('help:show', _.bind(this.showHelp, this));
 			App.vent.on('help:close', _.bind(this.Help.close, this.Help));
 			App.vent.on('help:toggle', _.bind(this.toggleHelp, this));
+
+			// Issue
+			App.vent.on('issue:new', _.bind(this.showIssue, this));
+			App.vent.on('issue:close', _.bind(this.Issue.close, this.Issue));
 
 			// Movies
 			App.vent.on('movie:showDetail', _.bind(this.showMovieDetail, this));
@@ -286,6 +291,7 @@
 			this.About.show(new App.View.About());
 		},
 
+
 		showTorrentCollection: function (e) {
 			this.TorrentCollection.show(new App.View.TorrentCollection());
 		},
@@ -313,6 +319,11 @@
 				this.showHelp();
 			}
 		},
+
+		showIssue: function (e) {
+			this.Issue.show(new App.View.Issue());
+		},
+		
 
 		preventDefault: function (e) {
 			e.preventDefault();
@@ -400,11 +411,11 @@
 		},
 
 		showViews: function (streamModel) {
-
 			this.Content.$el.show();
-			if (this.MovieDetail.$el !== undefined) {
+			try {
 				this.MovieDetail.$el.show();
-			}
+				this.MovieDetail.el.firstElementChild.classList == "shows-container-contain" ? App.vent.trigger('shortcuts:shows'): App.vent.trigger('shortcuts:movies');
+			} catch (err) {};
 			$(window).trigger('resize');
 		},
 

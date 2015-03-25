@@ -11,8 +11,8 @@
 
 		events: {
 			'click .close-icon': 'closeAbout',
-			'click .links': 'links',
-			'click #changelog': 'showChangelog'
+			'click #changelog': 'showChangelog',
+			'click .title-issue': 'reportIssue'
 		},
 
 		onShow: function () {
@@ -42,11 +42,6 @@
 			}
 		},
 
-		links: function (e) {
-			e.preventDefault();
-			gui.Shell.openExternal($(e.currentTarget).attr('href'));
-		},
-
 		showChangelog: function () {
 			fs.readFile('./CHANGELOG.md', 'utf-8', function (err, contents) {
 				if (!err) {
@@ -56,6 +51,10 @@
 					gui.Shell.openExternal('https://git.popcorntime.io/popcorntime/desktop/blob/master/CHANGELOG.md');
 				}
 			});
+		},
+
+		reportIssue: function () {
+			App.vent.trigger('issue:new');
 		},
 
 		closeChangelog: function () {

@@ -35,7 +35,15 @@
 		},
 
 		isMovie: function () {
-			return this.model.get('tvdb_id') === undefined;
+			if (this.model.get('tvdb_id') === undefined) {
+				if (this.model.get('type') === 'video/youtube' || this.model.get('imdb_id') === undefined) {
+					return undefined;
+				} else {
+					return 'movie';
+				}
+			} else {
+				return 'show';
+			}
 		},
 
 		initialize: function () {
@@ -93,10 +101,10 @@
 				clearInterval(this._AutoPlayCheckTimer);
 			}
 			// Check if >80% is watched to mark as watched by user  (maybe add value to settings
-			var type = (this.isMovie() ? 'movie' : 'show');
-			if (this.video.currentTime() / this.video.duration() >= 0.8) {
+			var type = this.isMovie();
+			if (this.video.currentTime() / this.video.duration() >= 0.8 && type !== undefined) {
 				App.vent.trigger(type + ':watched', this.model.attributes, 'scrobble');
-			} else {
+			} else if (type !== undefined) {
 				App.Trakt[type].cancelWatching();
 			}
 
@@ -165,7 +173,6 @@
 					$('.vjs-play-control').click();
 				});
 
-
 			} else {
 				this.video = videojs('video_player', {
 					nativeControlsForTouch: false,
@@ -213,7 +220,7 @@
 			});
 
 			var checkAutoPlay = function () {
-				if (!_this.isMovie() && next_episode_model) {
+				if (_this.isMovie() === 'show' && next_episode_model) {
 					if ((_this.video.duration() - _this.video.currentTime()) < 60 && _this.video.currentTime() > 30) {
 
 						if (!autoplayisshown) {
@@ -250,10 +257,10 @@
 
 
 			var sendToTrakt = function () {
-				if (_this.isMovie()) {
+				if (_this.isMovie() === 'movie') {
 					win.debug('Reporting we are watching ' + _this.model.get('imdb_id') + ' ' + (_this.video.currentTime() / _this.video.duration() * 100 | 0) + '% ' + (_this.video.duration() / 60 | 0));
 					App.Trakt.movie.watching(_this.model.get('imdb_id'), _this.video.currentTime() / _this.video.duration() * 100 | 0, _this.video.duration() / 60 | 0);
-				} else {
+				} else if (_this.isMovie() === 'show') {
 					win.debug('Reporting we are watching ' + _this.model.get('tvdb_id') + ' ' + (_this.video.currentTime() / _this.video.duration() * 100 | 0) + '%');
 					App.Trakt.show.watching(_this.model.get('tvdb_id'), _this.model.get('season'), _this.model.get('episode'), _this.video.currentTime() / _this.video.duration() * 100 | 0, _this.video.duration() / 60 | 0);
 				}
@@ -280,6 +287,11 @@
 					_this.wasSeek = false;
 				} else {
 					if (firstPlay) {
+						if (_this.model.get('type') === 'video/youtube') {
+							try {
+								document.getElementById('video_player_youtube_api').contentWindow.document.getElementsByClassName('video-ads')[0].style.display = 'none'; // XXX hide ads hack
+							} catch(e) {}; //no ads
+						}
 						firstPlay = false;
 						return;
 					}
@@ -310,9 +322,9 @@
 
 			// There was an issue with the video
 			player.on('error', function (error) {
-				if (_this.isMovie()) {
+				if (_this.isMovie() === 'movie') {
 					App.Trakt.movie.cancelWatching();
-				} else {
+				} else if (_this.isMovie() === 'show') {
 					App.Trakt.show.cancelWatching();
 				}
 				// TODO: user errors
@@ -768,6 +780,7 @@
 				$('.btn-os.fullscreen').removeClass('active');
 			}
 			this.unbindKeyboardShortcuts();
+			App.vent.trigger('player:close');
 		}
 
 	});

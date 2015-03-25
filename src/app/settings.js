@@ -43,7 +43,7 @@ Settings.movies_quality = 'all';
 Settings.subtitle_language = 'none';
 Settings.subtitle_size = '28px';
 Settings.subtitle_color = '#ffffff';
-Settings.subtitle_shadows = 'true';
+Settings.subtitle_decoration = 'Outline';
 Settings.subtitle_font = 'Arial';
 
 // More options
@@ -70,7 +70,7 @@ Settings.databaseLocation = path.join(data_path, 'data');
 Settings.deleteTmpOnClose = true;
 Settings.automaticUpdating = true;
 Settings.events = true;
-Settings.allowTorrentStorage = false;
+Settings.allowTorrentStorage = true;
 
 Settings.vpn = false;
 Settings.vpnUsername = '';
