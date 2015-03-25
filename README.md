@@ -1,10 +1,10 @@
-# [Popcorn Time](https://git.popcorntime.io/popcorntime/desktop/tree/master) [![Build Status](https://travis-ci.org/popcorn-official/popcorn-app.svg?branch=dev-0.3)](https://travis-ci.org/popcorn-official/popcorn-app)
+# [Popcorn Time vPutio](https://git.popcorntime.io/popcorntime/desktop/tree/master) [![Build Status](https://travis-ci.org/popcorn-official/popcorn-app.svg?branch=dev-0.3)](https://travis-ci.org/popcorn-official/popcorn-app)
 
 Allow any computer user to watch movies easily streaming from torrents, without any particular knowledge.
 
 ![Popcorn Time](https://i.imgur.com/MdZR313.gif)
 
-Visit the project's website at <https://popcorntime.io>.
+Visit the project's website at <https://putio-popcorntime.github.io>.
 
 ***
 
@@ -18,7 +18,7 @@ If you're comfortable getting up and running from a `git clone`, this method is 
 
 If you clone the GitHub repository, you will need to build a number of assets using grunt.
 
-The [master](https://git.popcorntime.io/popcorntime/desktop/tree/master) branch which contains the latest release.
+The [master](https://github.com/barisariburnu/putio-popcorn-time/tree/master) branch which contains the latest release.
 
 #### Quickstart:
 

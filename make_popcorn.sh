@@ -10,7 +10,7 @@
 ## If you use 'ssh' in the place of the optional [url] parameter, it will clone via ssh instead of http
 ##
 ## Optionally, you can also pass in a specific branch to build or clone, by making url contain a branch specifier
-## ./make_popcorn.sh '-b release/0.3.4 https://git.popcorntime.io/popcorntime/desktop.git'
+## ./make_popcorn.sh '-b release/0.3.4 https://github.com/barisariburnu/putio-popcorn-time.git'
 ##
 
 
@@ -36,7 +36,7 @@ execsudo() {
 
 clone_command() {
     if git clone ${clone_url} ${dir}; then
-        echo "Cloned Popcorn Time successfully"
+        echo "Cloned Popcorn Time vPutio successfully"
     else
         echo "Popcorn Time encountered an error and could not be cloned"
         exit 2
@@ -46,7 +46,7 @@ clone_command() {
 if [ -e ".git/config" ]; then
     dat=`cat .git/config | grep 'url'`
     case ${dat} in *popcorn-app*)
-        echo "You appear to be inside of a Popcorn Time repository already, not cloning"
+        echo "You appear to be inside of a Popcorn Time vPutio repository already, not cloning"
         clone_repo="False"
         ;;
     *)
@@ -68,7 +68,7 @@ if [ -e ".git/config" ]; then
             fi
         done
         if [ "$rd_cln" = "no" ]; then
-            echo "You appear to be inside of a Popcorn Time repository already, not cloning"
+            echo "You appear to be inside of a Popcorn Time vPutio repository already, not cloning"
             clone_repo="False"
         else
             echo "You've chosen to clone inside the current directory"
@@ -77,7 +77,7 @@ if [ -e ".git/config" ]; then
     esac
 fi
 if [ "${clone_repo}" = "True" ]; then
-    echo "Cloning Popcorn Time"
+    echo "Cloning Popcorn Time vPutio"
     read -p "Where do you wish to clone popcorn time to? [popcorn-app] " dir
     if [ -z "${dir}" ]; then
         dir='popcorn-app'
@@ -123,7 +123,7 @@ fi
 try="True"
 tries=0
 while [ "${try}" = "True" ]; do
-    read -p "Do you wish to install the required dependencies for Popcorn Time and setup for building? (yes/no) [yes] " rd_dep
+    read -p "Do you wish to install the required dependencies for Popcorn Time vPutio and setup for building? (yes/no) [yes] " rd_dep
     if [ -z "${rd_dep}" ]; then
         rd_dep="yes"
     fi
@@ -182,14 +182,14 @@ if [ "${rd_dep}" = "yes" ]; then
         exit 4
     fi
 
-    echo "Successfully setup for Popcorn Time"
+    echo "Successfully setup for Popcorn Time vPutio"
 fi
 
 if grunt build; then
-    echo "Popcorn Time built successfully!"
+    echo "Popcorn Time vPutio built successfully!"
     echo "Run 'grunt start' from inside the repository to launch the app"
     echo "Enjoy!"
 else
-    echo "Popcorn Time encountered an error and couldn't be built"
+    echo "Popcorn Time vPutio encountered an error and couldn't be built"
     exit 5
 fi

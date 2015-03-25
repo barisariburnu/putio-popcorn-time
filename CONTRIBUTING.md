@@ -69,7 +69,7 @@ Any other information you want to share that is relevant to the issue being repo
 ### Technical details:
 
 * Popcorn Time Version: stable 0.3.7
-* Downloaded from: popcorntime.io
+* Downloaded from: putio-popcorntime.github.io
 * Connection: 10mbs
 * OS: MAC OSX
 ```

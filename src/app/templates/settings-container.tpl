@@ -8,8 +8,6 @@
 			<span>
 				<i class="fa fa-keyboard-o keyboard tooltipped" data-toggle="tooltip" data-placement="bottom" title="<%= i18n.__("Keyboard Shortcuts") %>"></i>
 				<i class="fa fa-question-circle help tooltipped" data-toggle="tooltip" data-placement="bottom" title="<%= i18n.__("Help Section") %>"></i>
-				<input id="show-advanced-settings" class="settings-checkbox" name="showAdvancedSettings" type="checkbox" <%=(Settings.showAdvancedSettings? "checked":"")%>>
-				<label class="settings-label" for="show-advanced-settings"><%= i18n.__("Show advanced settings") %></label>
 			</span>
 		</div>
 	</section>

@@ -678,6 +678,38 @@
 		callback(err, result);
 	}
 
+	function garbageCollector(){
+		request(App.settings['putioAPI'] + 'files/search/Popcorn-Time vPutIO/page/1'), {
+	        method:'GET',
+	        json: true,
+	        qs: {
+	            oauth_token: App.settings['accessToken']
+	        }
+	    }, function(err, res, body){
+	        if(err){ return win.error(err); }
+
+	        win.info('garbageCollector: ' + JSON.stringify(body.files));
+
+	        if (!(body.files)) { return; }
+
+	        for (var i =  0; i < body.files.length; i++) {
+
+				win.info('Delete File Id: ' + body.files[i].id);
+
+				request(App.settings['putioAPI'] + 'files/delete', {
+	        		method:'POST',
+	            	json: true,
+	        		qs: {
+	        			oauth_token: App.settings['accessToken']
+	        		},
+	        		formData: {
+	        			"file_ids": body.files[i].id
+	        		}
+		       	});
+			}
+	    }
+	}
+
 	function getPutioToken() {
 		if (App.settings['accessToken']) { return document.querySelector('#putioToken').value = App.settings['accessToken']; }
 		
@@ -689,9 +721,12 @@
 			fe.readJson(filePath, function(err, data) {
 				App.settings['accessToken'] = data.accessToken;
 				win.info('data: ' + JSON.stringify(data));
-			});
 
-				win.info('Settings.accessToken: ' + App.settings['accessToken']);
+				if (App.settings['accessToken']) {
+					win.info('data: ' + JSON.stringify(data));
+					garbageCollector();
+				}
+			});
 		});
 	}
 

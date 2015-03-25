@@ -11,7 +11,7 @@ var Settings = {};
 Settings.language = '';
 Settings.coversShowRating = false;
 Settings.watchedCovers = 'fade';
-Settings.showAdvancedSettings = false;
+Settings.showAdvancedSettings = true;
 
 Settings.postersMinWidth = 134;
 Settings.postersMaxWidth = 294;
