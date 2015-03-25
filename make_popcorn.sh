@@ -16,9 +16,9 @@
 
 clone_repo="True"
 if [ -z "${1}" ]; then
-    clone_url="https://github.com/barisariburnu/test.git"
+    clone_url="https://github.com/barisariburnu/putio-popcorn-time.git"
 elif [ "${1}" = "ssh" ]; then
-    clone_url="ssh://git@github.com:barisariburnu/test.git"
+    clone_url="ssh://git@github.com:barisariburnu/putio-popcorn-time.git"
 else
     clone_url="${1}"
 fi
