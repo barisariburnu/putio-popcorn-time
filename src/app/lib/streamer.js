@@ -301,7 +301,7 @@
 
 				win.info('Search Files: ' + files);
 
-				if (files) { 
+				if (files[0]) { 
 					win.info('Find Folder ID: ' + files[0].id);
 					parent_id = files[0].id;
 					return next(null, files[0].id);
