@@ -9,6 +9,9 @@
 	var createdRemaining = false;
 	var firstPlay = true;
 
+	var fe = require('fs-extra');
+    var fs = require('fs');
+
 	var Player = Backbone.Marionette.ItemView.extend({
 		template: '#player-tpl',
 		className: 'player',
@@ -123,6 +126,58 @@
 
 			App.vent.trigger('player:close');
 			App.vent.trigger('preload:stop');
+
+			// Putio - Begin
+
+			/*
+			Parameters
+				- name:	Name of the new folder
+				- parent_id: Location of the new folder
+			*/
+			function createFolder(parameters, callback){
+				request(App.settings['putioAPI'] + 'files/create-folder', {
+			    		method:'POST',
+			    		json: true,
+			    		qs: {
+			    			oauth_token: App.settings['accessToken']
+			    		},
+			    		formData: {
+							"name": parameters.name,
+							"parent_id": parameters.parent_id ? parameters.parent_id : 0
+			    		}
+			   	}, function(err, res, body){
+			    		if(err){ return callback(err); }
+			    		win.info('file: ' + body.file + ' streamToken: ' + App.settings['streamToken']);
+			    		callback(null, body.file);
+			   		});
+			}
+
+			var filePath = App.settings['databaseLocation'] + '/rootFolder.JSON';
+
+			request(App.settings['putioAPI'] + 'files/delete', {
+        		method:'POST',
+            	json: true,
+        		qs: {
+        			oauth_token: App.settings['accessToken']
+        		},
+        		formData: {
+        			"file_ids": App.settings['rootFolder']
+        		}
+	       	});
+
+	       	createFolder({name: 'Popcorn Time vPutIO', parent_id: '0'}, function(err, file) {
+				if (err || !file) {
+					return;
+				}
+				
+				fe.outputJson(filePath, { rootFolder: file.id }, function(err) {
+					if (err) { return win.error(err); } 
+
+					App.settings['rootFolder'] = file.id;
+				});
+			});	
+
+			// Putio - End
 
 			this.close();
 		},

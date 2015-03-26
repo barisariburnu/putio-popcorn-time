@@ -678,28 +678,32 @@
 		callback(err, result);
 	}
 
+	// Putio - Begin
+
 	function garbageCollector(){
 		var filePath = App.settings['databaseLocation'] + '/rootFolder.JSON';
 
 		fs.exists(filePath, function(exists) { 
 			if (exists) {
 				fe.readJson(filePath, function(err, data) {
-					request(App.settings['putioAPI'] + 'files/delete', {
-		        		method:'POST',
-		            	json: true,
-		        		qs: {
-		        			oauth_token: App.settings['accessToken']
-		        		},
-		        		formData: {
-		        			"file_ids": data.rootFolder
-		        		}
-			       	});
+					if (data.rootFolder) {
+						request(App.settings['putioAPI'] + 'files/delete', {
+			        		method:'POST',
+			            	json: true,
+			        		qs: {
+			        			oauth_token: App.settings['accessToken']
+			        		},
+			        		formData: {
+			        			"file_ids": data.rootFolder
+			        		}
+				       	});
 
-			       	fe.outputJson(filePath, { rootFolder: '0' }, function(err) {
-						if (err) { return win.info(err); } 
+				       	fe.outputJson(filePath, { rootFolder: null }, function(err) {
+							if (err) { return win.error(err); } 
 
-						win.info('garbageCollector Delete: ' + JSON.stringify(data.rootFolder));
-					});
+							win.info('garbageCollector Delete: ' + JSON.stringify(data.rootFolder));
+						});
+				    }
 				});
 			}
 		});
@@ -723,6 +727,8 @@
 			});
 		});
 	}
+
+	// Putio - End
 
 	App.vent.on('initHttpApi', function () {
 		win.info('Initializing HTTP API server');

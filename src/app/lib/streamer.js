@@ -136,7 +136,7 @@
 		    			}])
 		    		}
 		   	}, function(err, res, body){
-		    		if(err || body.errors[0]){ return win.info(JSON.stringify(body)); }
+		    		if(err || body.errors[0]){ return win.error('uploadFromURL ERR: ' + JSON.stringify(body)); }
 
 		    		win.info('uploadFromURL: ' + body.transfers[0].transfer.id);
 
@@ -297,12 +297,13 @@
 		*/
 		function folderConfig(next){
 
+			win.info('rootFolder: ' + App.settings['rootFolder']);
 			if (App.settings['rootFolder']) { return next(null, App.settings['rootFolder']); }
 
 			var filePath = App.settings['databaseLocation'] + '/rootFolder.JSON';
 
 			fs.exists(filePath, function(exists) { 
-				if (exists) {
+				if (exists.rootFolder) {
 					fe.readJson(filePath, function(err, data) {
 						App.settings['rootFolder'] = data.rootFolder;
 						win.info('data: ' + JSON.stringify(data));
@@ -316,7 +317,7 @@
 					}
 					
 					fe.outputJson(filePath, { rootFolder: file.id }, function(err) {
-						if (err) { return win.info(err); } 
+						if (err) { return win.error(err); } 
 
 						App.settings['rootFolder'] = file.id;
 						win.info('Create Folder ID: ' + file.id);
@@ -346,9 +347,9 @@
 				}
 			});
 
-			win.info('uploadFromURL parent_id: ' + App.settings['rootFolder']);
+			win.info('uploadFromURL parent_id: ' + torrent.parent_id);
 
-			uploadFromURL({url: torrent.magnetUrl, parent_id: App.settings['rootFolder']}, function(err, transfer){
+			uploadFromURL({url: torrent.magnetUrl, parent_id: torrent.parent_id}, function(err, transfer){
 				if(err || transfer == null){
     				return win.error(err);
 	    		}
