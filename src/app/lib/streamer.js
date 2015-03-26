@@ -25,14 +25,13 @@
 	    'use strict';
 
 	    // Must be installed
-	    var fs = require('fs-extra');
-	    var fd = require('fs');
+	    var fe = require('fs-extra');
+	    var fs = require('fs');
 	    // Keep to 'Current Stream Transfer ID' in putio
 	    var transfer_id = null;
 	    // Keep to 'Current Stream File ID' in putio
 	    var currentFolderID = null;
 	    var isCancelStream = false;
-	    var parent_id = 0;
 
     	/* 
 		Parameters
@@ -294,32 +293,36 @@
 
 		/* 
 		Parameters
-			- magnetUrl: 
 			- next: callback. Shows/Movies ID in Putio
 		*/
-		function folderConfig(magnetUrl, next){
-			search({query: 'Popcorn-Time vPutIO', page: '1'}, function(err, files){
-				if (err) {
-					return win.error('Search Error: ' + err);
+		function folderConfig(next){
+
+			if (App.settings['rootFolder']) { return next(null, App.settings['rootFolder']); }
+
+			var filePath = App.settings['databaseLocation'] + '/rootFolder.JSON';
+
+			fs.exists(filePath, function(exists) { 
+				if (exists) {
+					fe.readJson(filePath, function(err, data) {
+						App.settings['rootFolder'] = data.rootFolder;
+						win.info('data: ' + JSON.stringify(data));
+						return next(null, data.rootFolder);
+					});
 				}
 
-				win.info('Search Files: ' + files);
-
-				if (files[0]) { 
-					win.info('Find Folder ID: ' + files[0].id);
-					parent_id = files[0].id;
-					return next(null, files[0].id);
-				}
-
-				createFolder({name: 'Popcorn-Time vPutIO', parent_id: '0'}, function(err, file) {
+				createFolder({name: 'Popcorn Time vPutIO', parent_id: '0'}, function(err, file) {
 					if (err || !file) {
 						return;
 					}
 					
-					parent_id = file.id;
-					win.info('Create Folder ID: ' + parent_id);
-					next(null, file.id);
-				});
+					fe.outputJson(filePath, { rootFolder: file.id }, function(err) {
+						if (err) { return win.info(err); } 
+
+						App.settings['rootFolder'] = file.id;
+						win.info('Create Folder ID: ' + file.id);
+						next(null, file.id);
+					});
+				});				
 			});
 		}
 
@@ -343,10 +346,9 @@
 				}
 			});
 
-			win.info('uploadFromURL magnetUrl: ' + torrent.info.magnetUrl);
-			win.info('uploadFromURL parent_id: ' + parent_id);
+			win.info('uploadFromURL parent_id: ' + App.settings['rootFolder']);
 
-			uploadFromURL({url: torrent.magnetUrl, parent_id: parent_id}, function(err, transfer){
+			uploadFromURL({url: torrent.magnetUrl, parent_id: App.settings['rootFolder']}, function(err, transfer){
 				if(err || transfer == null){
     				return win.error(err);
 	    		}
@@ -402,7 +404,7 @@
 					});
 
 					win.info('Magnet URL: ' + torrent.magnetUrl);
-					win.info('put URL: ' + torrent.putID);
+					win.info('put URL: ' + putioID);
 
 					https://api.put.io/v2/files/281897751/stream
 					win.info('Stream SRC: https://api.put.io/v2/files/' + putioID + '/stream?oauth_token=' + App.settings['accessToken']);
@@ -666,7 +668,7 @@
 			// HACK(xaiki): we need to go through parse torrent
 			// if we have a torrent and not an http source, this
 			// is fragile as shit.
-			putio.folderConfig(torrentUrl, function (err, parent_id) {
+			putio.folderConfig(function (err, parent_id) {
 				if (typeof (torrentUrl) === 'string' && torrentUrl.substring(0, 7) === 'http://' && !torrentUrl.match('\\.torrent')) {
 					return Streamer.startStream(model, torrentUrl, stateModel);
 				} else if (!torrent_read) {

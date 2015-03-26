@@ -679,35 +679,30 @@
 	}
 
 	function garbageCollector(){
-		request(App.settings['putioAPI'] + 'files/search/"Popcorn-Time vPutIO"/page/1', {
-	        method:'GET',
-	        json: true,
-	        qs: {
-	            oauth_token: App.settings['accessToken']
-	        }
-	    }, function(err, res, body){
-	        if(err){ return win.error(err); }
+		var filePath = App.settings['databaseLocation'] + '/rootFolder.JSON';
 
-	        win.info('garbageCollector: ' + JSON.stringify(body.files));
+		fs.exists(filePath, function(exists) { 
+			if (exists) {
+				fe.readJson(filePath, function(err, data) {
+					request(App.settings['putioAPI'] + 'files/delete', {
+		        		method:'POST',
+		            	json: true,
+		        		qs: {
+		        			oauth_token: App.settings['accessToken']
+		        		},
+		        		formData: {
+		        			"file_ids": data.rootFolder
+		        		}
+			       	});
 
-	        if (!(body.files)) { return; }
+			       	fe.outputJson(filePath, { rootFolder: '0' }, function(err) {
+						if (err) { return win.info(err); } 
 
-	        for (var i =  0; i < body.files.length; i++) {
-
-				win.info('Delete File Id: ' + body.files[i].id);
-
-				request(App.settings['putioAPI'] + 'files/delete', {
-	        		method:'POST',
-	            	json: true,
-	        		qs: {
-	        			oauth_token: App.settings['accessToken']
-	        		},
-	        		formData: {
-	        			"file_ids": body.files[i].id
-	        		}
-		       	});
+						win.info('garbageCollector Delete: ' + JSON.stringify(data.rootFolder));
+					});
+				});
 			}
-	    });
+		});
 	}
 
 	function getPutioToken() {
@@ -723,7 +718,6 @@
 				win.info('data: ' + JSON.stringify(data));
 
 				if (App.settings['accessToken']) {
-					win.info('data: ' + JSON.stringify(data));
 					garbageCollector();
 				}
 			});
