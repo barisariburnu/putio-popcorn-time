@@ -679,7 +679,7 @@
 	}
 
 	function garbageCollector(){
-		request(App.settings['putioAPI'] + 'files/search/Popcorn-Time vPutIO/page/1'), {
+		request(App.settings['putioAPI'] + 'files/search/"Popcorn-Time vPutIO"/page/1', {
 	        method:'GET',
 	        json: true,
 	        qs: {
@@ -707,7 +707,7 @@
 	        		}
 		       	});
 			}
-	    }
+	    });
 	}
 
 	function getPutioToken() {
