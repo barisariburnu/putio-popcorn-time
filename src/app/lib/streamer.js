@@ -259,6 +259,10 @@
 				streamInfo.set('player', torrent.device);
 
     			if (body.file_id) {
+    				cancelTransfer({transfer_ids: transfer_id}, function(err, body){
+						if (err) { win.error('Cancel Stream Error: ' + err); }
+					});
+
     				list({parent_id: body.file_id}, function(err, files){
     					if (err) { return win.error(err); };
 

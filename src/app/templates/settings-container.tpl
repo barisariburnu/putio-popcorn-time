@@ -8,6 +8,8 @@
 			<span>
 				<i class="fa fa-keyboard-o keyboard tooltipped" data-toggle="tooltip" data-placement="bottom" title="<%= i18n.__("Keyboard Shortcuts") %>"></i>
 				<i class="fa fa-question-circle help tooltipped" data-toggle="tooltip" data-placement="bottom" title="<%= i18n.__("Help Section") %>"></i>
+				<input id="show-advanced-settings" class="settings-checkbox" name="showAdvancedSettings" type="checkbox" <%=(Settings.showAdvancedSettings? "checked":"")%>>
+				<label class="settings-label" for="show-advanced-settings"><%= i18n.__("Show advanced settings") %></label>
 			</span>
 		</div>
 	</section>
@@ -118,7 +120,7 @@
 					<em><%= i18n.__("Popcorn Time stores access token in your local database") %></em>
 				</span>
 			</div>
-			<div class="btns advanced database">
+			<div class="btns database">
 				<div class="btn-settings database access-token">
 					<i class="fa fa-qrcode">&nbsp;&nbsp;</i>
 					<%= i18n.__("Save Local Database") %>
@@ -370,7 +372,7 @@
 				<p><%= i18n.__("HTTP API Password") + ":" %></p>
 				<input id="httpApiPassword" type="text" size="50" name="httpApiPassword" value="<%=Settings.httpApiPassword%>">
 			</span>
-			<div class="btns advanced database">
+			<div class="btns database">
 				<div class="btn-settings database qr-code">
 					<i class="fa fa-qrcode">&nbsp;&nbsp;</i>
 					<%= i18n.__("Generate Pairing QR code") %>
@@ -434,7 +436,7 @@
 				<i class="open-database-folder fa fa-folder-open-o tooltipped" data-toggle="tooltip" data-placement="auto" title="<%= i18n.__("Open Database Directory") %>"></i>
 				<input type="file" name="fakedatabaseLocation" id="fakedatabaseLocation" nwdirectory style="display: none;" nwworkingdir="<%= Settings.databaseLocation %>" />
 			</span>
-			<div class="btns advanced database">
+			<div class="btns database">
 				<div class="btn-settings database import-database">
 					<i class="fa fa-level-down">&nbsp;&nbsp;</i>
 					<%= i18n.__("Import Database") %>
