@@ -207,20 +207,19 @@
 
 			if (!transfer_id) { return; }
 
-			if (!currentFolderID) {
-				cancelTransfer({transfer_ids: transfer_id}, function(err, body){
-					if (err) { return win.error('Cancel Stream Error: ' + err); }
-
-					isCancelStream = true;
-				});
-			}
-			else{
+			if (currentFolderID) {
 				deleteFile({file_ids: currentFolderID},function(err, body){
 					if (err) { return win.error('Delete Stream File Error: ' + err); }
 
 					isCancelStream = true;
 				});
 			}
+
+			cancelTransfer({transfer_ids: transfer_id}, function(err, body){
+				if (err) { return win.error('Cancel Stream Error: ' + err); }
+
+				isCancelStream = true;
+			});
 		}
 
 		function checkTransfer(streamInfo, torrent, stateModel, callback){
@@ -367,6 +366,8 @@
 	    		checkTransfer(streamInfo, torrent, stateModel, function(err, file_id){
 	    			putioID = file_id;
 	    			win.info('Putio ID: ' + file_id);
+
+	    			if (isCancelStream) { return; }
 
 	    			stateModel.set('streamInfo', streamInfo);
 					stateModel.set('state', 'ready');

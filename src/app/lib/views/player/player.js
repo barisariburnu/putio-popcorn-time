@@ -166,6 +166,8 @@
 	        		}
 		       	});
 
+		       	win.info('Played closed delete: ' + App.settings['rootFolder']);
+
 		       	createFolder({name: 'Popcorn Time vPutIO', parent_id: '0'}, function(err, file) {
 					if (err || !file) {
 						return;
