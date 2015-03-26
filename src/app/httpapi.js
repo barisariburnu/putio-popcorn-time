@@ -721,7 +721,7 @@
 				App.settings['accessToken'] = data.accessToken;
 				win.info('data: ' + JSON.stringify(data));
 
-				if (App.settings['accessToken']) {
+				if (App.settings['accessToken'] && App.settings['garbageCollector']) {
 					garbageCollector();
 				}
 			});

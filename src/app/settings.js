@@ -61,6 +61,7 @@ Settings.syncOnStart = false;
 Settings.accessToken = null;
 Settings.putioAPI = 'https://api.put.io/v2/';
 Settings.rootFolder = null;
+Settings.garbageCollector = false;
 
 // Advanced options
 Settings.connectionLimit = 100;

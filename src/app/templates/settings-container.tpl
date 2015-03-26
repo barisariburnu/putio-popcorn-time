@@ -129,6 +129,16 @@
 		</div>
 	</section>
 
+	<section id="garbage">
+		<div class="title"><%= i18n.__("Garbage Collector") %></div>
+		<div class="content">
+			<span>
+				<input class="settings-checkbox" name="garbageCollector" id="garbageCollector" type="checkbox" <%=(Settings.garbageCollector? "checked='checked'":"")%>>
+				<label class="settings-label" for="garbageCollector"><%= i18n.__("Clear content during video closed on Put.io") %></label>
+			</span>
+		</div>
+	</section>
+
 	<section id="subtitles">
 		<div class="title"><%= i18n.__("Subtitles") %></div>
 		<div class="content">

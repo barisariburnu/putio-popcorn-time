@@ -23,7 +23,6 @@
 
 		events: {
 			'click .keyboard': 'showKeyboard',
-			'click .token': 'showToken',
 			'click .help': 'showHelp',
 			'click .close-icon': 'closeSettings',
 			'change select,input': 'saveSetting',
@@ -159,10 +158,6 @@
 			App.vent.trigger('keyboard:toggle');
 		},
 
-		showToken: function () {
-			App.vent.trigger('token:toggle');
-		},
-
 		saveSetting: function (e) {
 			var value = false;
 			var data = {};
@@ -221,6 +216,7 @@
 			case 'events':
 			case 'alwaysFullscreen':
 			case 'allowTorrentStorage':
+			case 'garbageCollector':
 				value = field.is(':checked');
 				break;
 			case 'httpApiUsername':

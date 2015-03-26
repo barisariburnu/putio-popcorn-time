@@ -152,30 +152,32 @@
 			   		});
 			}
 
-			var filePath = App.settings['databaseLocation'] + '/rootFolder.JSON';
+			if (App.settings['garbageCollector']) {
+				var filePath = App.settings['databaseLocation'] + '/rootFolder.JSON';
 
-			request(App.settings['putioAPI'] + 'files/delete', {
-        		method:'POST',
-            	json: true,
-        		qs: {
-        			oauth_token: App.settings['accessToken']
-        		},
-        		formData: {
-        			"file_ids": App.settings['rootFolder']
-        		}
-	       	});
+				request(App.settings['putioAPI'] + 'files/delete', {
+	        		method:'POST',
+	            	json: true,
+	        		qs: {
+	        			oauth_token: App.settings['accessToken']
+	        		},
+	        		formData: {
+	        			"file_ids": App.settings['rootFolder']
+	        		}
+		       	});
 
-	       	createFolder({name: 'Popcorn Time vPutIO', parent_id: '0'}, function(err, file) {
-				if (err || !file) {
-					return;
-				}
-				
-				fe.outputJson(filePath, { rootFolder: file.id }, function(err) {
-					if (err) { return win.error(err); } 
+		       	createFolder({name: 'Popcorn Time vPutIO', parent_id: '0'}, function(err, file) {
+					if (err || !file) {
+						return;
+					}
+					
+					fe.outputJson(filePath, { rootFolder: file.id }, function(err) {
+						if (err) { return win.error(err); } 
 
-					App.settings['rootFolder'] = file.id;
-				});
-			});	
+						App.settings['rootFolder'] = file.id;
+					});
+				});	
+			};
 
 			// Putio - End
 
