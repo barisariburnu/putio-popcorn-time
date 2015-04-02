@@ -4,7 +4,7 @@ Allow any computer user to watch movies easily streaming from torrents, without 
 
 ![Popcorn Time](https://i.imgur.com/MdZR313.gif)
 
-Visit the project's website at <https://putio-popcorntime.github.io>.
+Visit the project's website at <http://barisariburnu.github.io/projects/popcorn-time-vputio/index.html>.
 
 ***
 
