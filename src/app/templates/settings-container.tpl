@@ -117,7 +117,7 @@
 						<div class="invalid-cross" style="display: none"></div>
 				</span>
 				<span>
-					<em><%= i18n.__("Popcorn Time stores access token in your local database") %></em>
+					<em><%= i18n.__("Putcorn Time stores access token in your local database") %></em>
 				</span>
 			</div>
 			<div class="btns database">
@@ -330,7 +330,7 @@
 					</span>
 				<% } else { %>
 					<span>
-						<%= i18n.__("Enter your Trakt.tv details here to automatically 'scrobble' episodes you watch in Popcorn Time") %>
+						<%= i18n.__("Enter your Trakt.tv details here to automatically 'scrobble' episodes you watch in Putcorn Time") %>
 					</span>
 					<span>
 						<p><%= i18n.__("Username") + ":" %></p>
@@ -344,7 +344,7 @@
 						<input type="password" size="50" id="traktPassword" name="traktPassword">
 					</span>
 					<span>
-						<em><%= i18n.__("Popcorn Time stores an encrypted hash of your password in your local database") %></em>
+						<em><%= i18n.__("Putcorn Time stores an encrypted hash of your password in your local database") %></em>
 					</span>
 				<% } %>
 			</div>

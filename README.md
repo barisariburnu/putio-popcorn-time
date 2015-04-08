@@ -1,10 +1,10 @@
-# [Popcorn Time vPutio](https://git.popcorntime.io/popcorntime/desktop/tree/master) [![Build Status](https://travis-ci.org/popcorn-official/popcorn-app.svg?branch=dev-0.3)](https://travis-ci.org/popcorn-official/popcorn-app)
+# [Putcorn Time](https://git.popcorntime.io/popcorntime/desktop/tree/master)
 
 Allow any computer user to watch movies easily streaming from torrents, without any particular knowledge.
 
 ![Popcorn Time](https://i.imgur.com/MdZR313.gif)
 
-Visit the project's website at <http://barisariburnu.github.io/projects/popcorn-time-vputio/index.html>.
+Visit the project's website at <http://barisariburnu.github.io/projects/putcorn-time/index.html>.
 
 ***
 
