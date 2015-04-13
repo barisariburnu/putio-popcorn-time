@@ -310,7 +310,7 @@
 					});
 				}
 
-				createFolder({name: 'Popcorn Time vPutIO', parent_id: '0'}, function(err, file) {
+				createFolder({name: 'Putcorn Time', parent_id: '0'}, function(err, file) {
 					if (err || !file) {
 						return;
 					}
