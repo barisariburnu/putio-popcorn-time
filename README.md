@@ -2,8 +2,6 @@
 
 Allow any computer user to watch movies easily streaming from torrents, without any particular knowledge.
 
-![Popcorn Time](https://i.imgur.com/MdZR313.gif)
-
 Visit the project's website at <http://barisariburnu.github.io/projects/putcorn-time/index.html>.
 
 ***
