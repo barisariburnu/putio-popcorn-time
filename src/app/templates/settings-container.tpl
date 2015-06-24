@@ -382,7 +382,7 @@
 				<p><%= i18n.__("HTTP API Password") + ":" %></p>
 				<input id="httpApiPassword" type="text" size="50" name="httpApiPassword" value="<%=Settings.httpApiPassword%>">
 			</span>
-			<div class="btns database">
+			<div class="btns advanced database">
 				<div class="btn-settings database qr-code">
 					<i class="fa fa-qrcode">&nbsp;&nbsp;</i>
 					<%= i18n.__("Generate Pairing QR code") %>
@@ -446,7 +446,7 @@
 				<i class="open-database-folder fa fa-folder-open-o tooltipped" data-toggle="tooltip" data-placement="auto" title="<%= i18n.__("Open Database Directory") %>"></i>
 				<input type="file" name="fakedatabaseLocation" id="fakedatabaseLocation" nwdirectory style="display: none;" nwworkingdir="<%= Settings.databaseLocation %>" />
 			</span>
-			<div class="btns database">
+			<div class="btns advanced database">
 				<div class="btn-settings database import-database">
 					<i class="fa fa-level-down">&nbsp;&nbsp;</i>
 					<%= i18n.__("Import Database") %>

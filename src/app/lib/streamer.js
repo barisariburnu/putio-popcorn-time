@@ -121,6 +121,7 @@
 			- parent_id: Location of the uploaded file. This defaults to 0 (which means root)
 		*/
 		function uploadFromURL(parameters, callback){
+			win.error(JSON.stringify(parameters));
 			request(App.settings['putioAPI'] + 'transfers/add-multi', {
 		    		method:'POST',
 		    		json: true,
@@ -136,8 +137,8 @@
 		    			}])
 		    		}
 		   	}, function(err, res, body){
-		    		if(err || body.errors[0]){ return win.error('uploadFromURL ERR: ' + JSON.stringify(body)); }
-
+		    		if(err){ return win.error('uploadFromURL ERR: ' + JSON.stringify(body)); }
+		    		win.error(JSON.stringify(body));
 		    		win.info('uploadFromURL: ' + body.transfers[0].transfer.id);
 
 		    		callback(null, body.transfers[0].transfer);
@@ -512,7 +513,7 @@
 
 			this.stop_ = false;
 			var that = this;
-			var doTorrent = function (err, torrent, parent_id) {
+			var doTorrent = function (err, torrent) {
 				// Return if streaming was cancelled while loading torrent
 				if (that.stop_) {
 					return;
@@ -572,8 +573,7 @@
 							auto_play: model.get('auto_play'),
 							auto_id: model.get('auto_id'),
 							auto_play_data: model.get('auto_play_data'),
-							magnetUrl: torrentUrl,
-							parent_id: parent_id
+							magnetUrl: torrentUrl
 						};
 
 						putio.handleTorrent(torrentInfo, stateModel);
@@ -701,7 +701,6 @@
 
 		stop: function () {
 			this.stop_ = true;
-
 			if (engine) {
 				if (engine.server._handle) {
 					engine.server.close();
@@ -709,7 +708,6 @@
 				engine.destroy();
 			}
 			clearInterval(statsUpdater);
-			
 			statsUpdater = null;
 			engine = null;
 			subtitles = null; // reset subtitles to make sure they will not be used in next session.
