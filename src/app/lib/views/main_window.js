@@ -140,7 +140,14 @@
 
 					// Create the System Temp Folder. This is used to store temporary data like movie files.
 					if (!fs.existsSync(Settings.tmpLocation)) {
-						fs.mkdir(Settings.tmpLocation);
+						fs.mkdir(Settings.tmpLocation, function (err) {
+							if (!err || err.errno === '-4075') {
+								//success
+							} else {
+								Settings.tmpLocation = path.join(os.tmpDir(), 'Popcorn-Time');
+								fs.mkdir(Settings.tmpLocation);
+							}
+						});
 					}
 
 					try {
@@ -291,7 +298,6 @@
 			this.About.show(new App.View.About());
 		},
 
-
 		showTorrentCollection: function (e) {
 			this.TorrentCollection.show(new App.View.TorrentCollection());
 		},
@@ -323,20 +329,15 @@
 		showIssue: function (e) {
 			this.Issue.show(new App.View.Issue());
 		},
-		
 
 		preventDefault: function (e) {
 			e.preventDefault();
 		},
 
 		showMovieDetail: function (movieModel) {
-			if (App.settings['accessToken']) {
-				return this.MovieDetail.show(new App.View.MovieDetail({
+			this.MovieDetail.show(new App.View.MovieDetail({
 				model: movieModel
 			}));
-			}
-			
-			this.showSettings();
 		},
 
 		closeMovieDetail: function (movieModel) {
@@ -345,13 +346,9 @@
 		},
 
 		showShowDetail: function (showModel) {
-			if (App.settings['accessToken']) {
-				return this.MovieDetail.show(new App.View.ShowDetail({
-					model: showModel
-				}));
-			}
-			
-			this.showSettings();
+			this.MovieDetail.show(new App.View.ShowDetail({
+				model: showModel
+			}));
 		},
 
 		closeShowDetail: function (showModel) {

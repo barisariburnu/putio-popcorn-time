@@ -16,10 +16,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see http://www.gnu.org/licenses/ .
  
+If you want to contact us : hello@popcorntime.io
  
-Putcorn Time - Streaming video through torrents
-Copyright © 2015  Putcorn Time and the contributors (http://barisariburnu.github.io/projects/putcorn-time/index.html)
-Putcorn Time is released under the GPL
+ 
+Popcorn Time - Streaming video through torrents
+Copyright © 2014  Popcorn Time and the contributors (popcorntime.io)
+Popcorn Time is released under the GPL
+
+Last update: May 4, 2014
  
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -646,6 +650,6 @@ copy of the Program in return for a fee.
 END OF TERMS AND CONDITIONS
  
 The source code for any program binaries or compressed scripts that are
-included with Putcorn Time can be freely obtained at the following URL:
+included with Popcorn Time can be freely obtained at the following URL:
  
-https://github.com/barisariburnu/putio-popcorn-time
+https://git.popcorntime.io/
